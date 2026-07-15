@@ -1,0 +1,32 @@
+name: Refresh market data
+on:
+  schedule:
+    - cron: '0 6 * * 1-5'   # weekdays 06:00 UTC
+  workflow_dispatch:          # allow manual run
+permissions:
+  contents: write
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python build_data.py
+      - name: Enrich with price history + technicals
+        run: |
+          python build_prices.py fetch 0 200
+          python build_prices.py merge
+      - name: Enrich with smart-money (ownership + insider flow)
+        run: |
+          python build_flow.py fetch 0 200
+          python build_flow.py merge
+      - name: Commit updated data
+        run: |
+          git config user.name  "data-bot"
+          git config user.email "actions@github.com"
+          git add data.json data.js
+          git commit -m "Auto: refresh market data" || echo "no changes"
+          git push
