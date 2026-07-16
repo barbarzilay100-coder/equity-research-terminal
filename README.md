@@ -1,5 +1,7 @@
 # Equity Research Terminal
 
+Built by **Bar Barzilay** — [LinkedIn](https://www.linkedin.com/in/bar-barzilay-ba932235b) · [GitHub](https://github.com/barbarzilay100-coder) · [barbarzilay100@gmail.com](mailto:barbarzilay100@gmail.com)
+
 A live, single-page **equity research terminal** covering ~117 major US companies. It has four modes:
 
 - **Market Overview** — a GARP-quality heatmap by sector plus leaderboards (Highest Quality, Most Undervalued, Quality on Sale).
@@ -15,6 +17,15 @@ A live, single-page **equity research terminal** covering ~117 major US companie
 ![Market Overview — GARP heatmap by sector](docs/market-overview.jpg)
 
 ![Research report — graded scorecard and sub-tabs](docs/research-report.jpg)
+
+## Skills demonstrated
+
+| Feature | Skill it proves |
+|---|---|
+| `build_data.py` / `build_prices.py` / `build_flow.py` — yfinance data pipelines | Python, data acquisition & cleaning |
+| Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis & valuation |
+| CI-gated end-to-end test — a data refresh only ships if every check passes | Accuracy & attention to detail |
+| Sector heatmap, screener, leaderboards, side-by-side compare | BI dashboards & data visualization |
 
 ## How it works
 
