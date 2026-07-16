@@ -635,7 +635,7 @@ async function genAI(){
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-3-5-sonnet-20241022',max_tokens:900,messages:[{role:'user',content:prompt}]})});
+      body:JSON.stringify({model:'claude-sonnet-5',max_tokens:900,messages:[{role:'user',content:prompt}]})});
     if(!res.ok) throw new Error('API '+res.status);
     const j=await res.json(); let txt=j.content[0].text; const s=txt.indexOf('{'),e=txt.lastIndexOf('}');
     const m=JSON.parse(txt.slice(s,e+1)); m.catLabel='Catalysts'; m.rskLabel='Key Risks';

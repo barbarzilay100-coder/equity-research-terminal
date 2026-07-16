@@ -12,7 +12,7 @@ UNIVERSE = [
     "QCOM","TXN","CSCO","IBM","NOW","INTU","AMAT","MU","ADI","LRCX","KLAC","SNPS","CDNS",
     "PLTR","PANW","CRWD","SNOW","DDOG","NET","MDB","ZS","TEAM","WDAY","ANET","MRVL","SMCI",
     # Fintech / payments / crypto-adjacent (relevant to finance & crypto focus)
-    "V","MA","PYPL","COIN","HOOD","SOFI","AXP","FIS","FISV","GPN","AFRM","NU","MELI",
+    "V","MA","PYPL","COIN","HOOD","SOFI","AXP","FIS","FI","GPN","AFRM","NU","MELI",
     # Financials
     "JPM","BAC","WFC","GS","MS","C","SCHW","BLK","BX","KKR","SPGI","ICE","CME","MCO","BRK-B",
     # Consumer / internet
@@ -22,8 +22,9 @@ UNIVERSE = [
     "UNH","JNJ","LLY","PFE","MRK","ABBV","TMO","ABT","DHR","AMGN","ISRG","VRTX","GILD",
     # Industrial / energy / other
     "XOM","CVX","CAT","BA","GE","HON","UPS","RTX","DE","LMT","UNP","LIN","NEE",
-    "T","VZ","TMUS","CMCSA","NKE",
+    "T","VZ","TMUS","CMCSA",
 ]
+UNIVERSE = list(dict.fromkeys(UNIVERSE))  # guard against accidental duplicates
 
 def num(v):
     try:
@@ -131,8 +132,14 @@ def main():
         except Exception as e:
             print(f"[{n}/{len(tickers)}] ERR  {tk}: {e}")
         time.sleep(float(os.environ.get("SLEEP","0.15")))
+    # Safety guard: if the source rate-limited or failed mid-run, don't overwrite
+    # good committed data with a shrunken universe. Tunable via MIN_COUNT.
+    min_count=int(os.environ.get("MIN_COUNT","100"))
+    if len(sys.argv)<=1 and len(tickers)>=min_count and len(out)<min_count:
+        print(f"\nABORT  only {len(out)}/{len(tickers)} companies fetched (< MIN_COUNT={min_count}); not writing output.")
+        sys.exit(1)
     payload={
-      "generated": datetime.datetime.utcnow().strftime("%b %d, %Y"),
+      "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%b %d, %Y"),
       "count": len(out),
       "companies": out,
     }

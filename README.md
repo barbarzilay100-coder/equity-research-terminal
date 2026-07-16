@@ -10,7 +10,7 @@ A live, single-page **equity research terminal** covering ~117 major US companie
   moving averages + RSI signals), and a **Smart Money** tab (institutional ownership, 13F position
   changes, and insider buying/selling).
 
-**[ Live demo → enable GitHub Pages on this repo ]**
+**Live demo:** https://barbarzilay100-coder.github.io/equity-research-terminal/
 
 ## How it works
 
@@ -56,6 +56,19 @@ Then just **double-click `index.html`** — it loads `data.js` via a script tag,
 directly from the file system (no local server needed) and on GitHub Pages alike.
 
 To expand coverage, edit the `UNIVERSE` list in `build_data.py`.
+
+## Tests
+
+An end-to-end smoke test boots the whole app in jsdom and exercises all four views,
+the report sub-tabs, filtering, comparison and search:
+
+```bash
+npm install jsdom
+node tests/e2e.cjs
+```
+
+The CI workflow runs it after every data refresh — if the data or the app breaks,
+nothing gets committed.
 
 ## Stack
 
