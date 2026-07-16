@@ -3,30 +3,48 @@ on:
   schedule:
     - cron: '0 6 * * 1-5'   # weekdays 06:00 UTC
   workflow_dispatch:          # allow manual run
+  push:
+    paths: ['index.html', 'tests/**']   # re-run the e2e test when the app changes
 permissions:
   contents: write
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - run: pip install -r requirements.txt
-      - run: python build_data.py
+      - name: Build fundamentals (aborts if fewer than MIN_COUNT companies fetched)
+        if: github.event_name != 'push'
+        run: python build_data.py                # fundamentals -> data.json / data.js
       - name: Enrich with price history + technicals
+        if: github.event_name != 'push'
         run: |
-          python build_prices.py fetch 0 200
-          python build_prices.py merge
+          python build_prices.py fetch 0 200     # 50/200-day MA + RSI for the whole universe
+          python build_prices.py merge           # fold tech into data.json / data.js
       - name: Enrich with smart-money (ownership + insider flow)
+        if: github.event_name != 'push'
         run: |
-          python build_flow.py fetch 0 200
-          python build_flow.py merge
+          python build_flow.py fetch 0 200       # institutional + 13F changes + insider Form 4
+          python build_flow.py merge             # fold flow into data.json / data.js
+      - name: End-to-end test (gate — bad data or a broken app never gets committed)
+        run: |
+          npm install --no-save jsdom
+          node tests/e2e.cjs
       - name: Commit updated data
+        if: github.event_name != 'push'
         run: |
           git config user.name  "data-bot"
           git config user.email "actions@github.com"
           git add data.json data.js
-          git commit -m "Auto: refresh market data" || echo "no changes"
+          git commit -m "Auto: refresh market data ($(date -u +%F))" || echo "no changes"
           git push
