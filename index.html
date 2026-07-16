@@ -169,6 +169,8 @@
   .filterbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
   .filterbar input,.filterbar select{padding:9px 12px;border-radius:9px;border:1px solid var(--line);font-size:13px;background:#fff}
   .filterbar input[type=text]{flex:1;min-width:180px}
+  .filterbar .csvbtn{padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:600;color:var(--navy);cursor:pointer}
+  .filterbar .csvbtn:hover{border-color:var(--gold)}
   .coltoggle{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
   .scrcount{font-size:12.5px;color:var(--muted);margin-left:auto}
   .scrwrap{max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
@@ -811,6 +813,7 @@ function renderScreener(){
           <option value="0.4">Mixed &amp; up</option>
         </select>
         <label class="coltoggle"><input type="checkbox" id="scrAll" onchange="SHOWALL=this.checked;paintHead();paintScreener()"> All columns</label>
+        <button class="csvbtn" onclick="exportCSV()">Export CSV</button>
         <span id="scrCount" class="scrcount"></span>
       </div>
       <div class="scrwrap"><table class="scrtable"><thead id="scrHead"></thead><tbody id="scrBody"></tbody></table></div>
@@ -830,11 +833,11 @@ function setSort(k){
   else { SORT.key=k; SORT.dir=(k==='ticker'||k==='name'||k==='sector')?1:-1; }
   paintHead(); paintScreener();
 }
-function paintScreener(){
+function screenerRows(){
   const q=($('scrSearch').value||'').trim().toUpperCase();
   const sec=$('scrSector').value;
   const minR=parseFloat($('scrMin').value||'0');
-  let rows=DB.companies.filter(c=>{
+  const rows=DB.companies.filter(c=>{
     if(sec && c.sector!==sec) return false;
     if(c._sc.ratio<minR) return false;
     if(q && !(c.ticker.toUpperCase().includes(q)||c.name.toUpperCase().includes(q))) return false;
@@ -849,6 +852,19 @@ function paintScreener(){
     if(typeof va==='string') return dir*va.localeCompare(vb);
     return dir*(va-vb);
   });
+  return rows;
+}
+function exportCSV(){
+  const cols=activeCols();
+  const esc=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const lines=[cols.map(c=>esc(c.label)).join(',')];
+  screenerRows().forEach(c=>lines.push(cols.map(col=>esc(col.k==='garp'?c._sc.ratio.toFixed(2):c[col.k])).join(',')));
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));
+  a.download='equity-screener.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+function paintScreener(){
+  const rows=screenerRows();
   $('scrCount').textContent=rows.length+' of '+DB.count+' companies';
   const cols=activeCols();
   $('scrBody').innerHTML=rows.map(c=>{
