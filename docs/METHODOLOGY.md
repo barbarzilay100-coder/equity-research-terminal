@@ -57,8 +57,10 @@ snapshot is not a fairness opinion — this is a screening signal, not a price t
 
 - **Single source.** All fundamentals come from Yahoo Finance via `yfinance`. There is no
   second vendor to reconcile against, and Yahoo's field definitions (e.g. what lands in
-  `totalDebt`) are not always documented. Field-level anomalies in Yahoo data flow straight
-  into the scorecard.
+  `totalDebt`) are not always documented. To contain this, every refresh runs
+  `validate_data.py`: derived fields are recomputed from their inputs (hard failures block
+  the commit) and source-data oddities are reported in `docs/validation-report.md` — but a
+  wrong-but-internally-consistent Yahoo number still flows through.
 - **PEG definition.** Yahoo's `trailingPegRatio` uses an ~5-year expected earnings-growth
   estimate in the denominator — an analyst consensus input, not a reported number.
 - **13F lag.** Institutional holdings (13F filings) are due 45 days after quarter end, so

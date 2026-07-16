@@ -26,7 +26,7 @@ A live, single-page **equity research terminal** covering ~117 major US companie
 | `build_data.py` / `build_prices.py` / `build_flow.py` — yfinance data pipelines | Python, data acquisition & cleaning |
 | Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis |
 | Sector-relative implied valuation — peer-median EV/EBITDA & forward P/E repricing | Relative valuation (comps) |
-| CI-gated end-to-end test — a data refresh only ships if every check passes | Accuracy & attention to detail |
+| CI-gated e2e test + [data validation](docs/validation-report.md) — reconciliation & bounds checks gate every refresh | Accuracy, reconciliation & attention to detail |
 | Sector heatmap, screener, leaderboards, side-by-side compare | BI dashboards & data visualization |
 | [Excel valuation workbook](docs/valuation-models.xlsx) — 5-yr DCF + trading comps, named ranges, sensitivity table | Advanced Excel & financial modeling |
 | SQLite snapshot (`terminal.db`) + [windowed analytical queries](sql/queries.sql) | SQL |
@@ -123,6 +123,11 @@ node tests/e2e.cjs
 
 The CI workflow runs it after every data refresh — if the data or the app breaks,
 nothing gets committed.
+
+A separate validation step (`validate_data.py`) reconciles every derivable field against its
+inputs (analyst upside, implied upside, EV/FCF, margins vs. reported revenue), bounds-checks
+the rest, and hard-fails the workflow on anomalies. Each run's findings are committed as
+[docs/validation-report.md](docs/validation-report.md).
 
 ## Stack
 

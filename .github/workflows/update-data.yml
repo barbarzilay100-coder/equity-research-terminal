@@ -39,6 +39,9 @@ jobs:
       - name: Write SQLite snapshot
         if: github.event_name != 'push'
         run: python build_db.py                # data.json -> terminal.db
+      - name: Validate data (reconciliation + bounds; hard anomalies fail the run)
+        if: github.event_name != 'push'
+        run: python validate_data.py           # writes docs/validation-report.md
       - name: End-to-end test (gate — bad data or a broken app never gets committed)
         run: |
           npm install --no-save jsdom
@@ -48,6 +51,6 @@ jobs:
         run: |
           git config user.name  "data-bot"
           git config user.email "actions@github.com"
-          git add data.json data.js terminal.db
+          git add data.json data.js terminal.db docs/validation-report.md
           git commit -m "Auto: refresh market data ($(date -u +%F))" || echo "no changes"
           git push
