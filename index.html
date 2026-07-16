@@ -297,7 +297,7 @@ function buildChecklist(d){
     {name:"Net Margin", thr:"> 15%", val:d.netMargin, disp:ppct(d.netMargin), pass:v=>v>15},
     {name:"Return on Equity", thr:"> 15%", val:d.roe, disp:ppct(d.roe), pass:v=>v>15},
     {name:"Valuation (PEG)", thr:"PEG < 2", val:d.peg, disp:d.peg!=null?d.peg.toFixed(2):'N/A', pass:v=>v<2},
-    {name:"Earnings Re-rating", thr:"Fwd P/E < Trailing P/E", val:rerate, disp:(d.forwardPE!=null&&d.pe!=null)?(x(d.forwardPE)+" vs "+x(d.pe)):'N/A', pass:v=>v>0},
+    {name:"Forward Multiple Discount", thr:"Fwd P/E < Trailing P/E", val:rerate, disp:(d.forwardPE!=null&&d.pe!=null)?(x(d.forwardPE)+" vs "+x(d.pe)):'N/A', pass:v=>v>0},
     {name:"Balance Sheet", thr:"Debt / Equity < 1.5", val:d.debtEquity, disp:d.debtEquity!=null?d.debtEquity.toFixed(2):'N/A', pass:v=>v<1.5}
   ];
   let pass=0,counted=0;
@@ -725,7 +725,7 @@ function renderMarket(){
     </div>
     <div class="ov-cols">
       <div class="section"><h2>Highest Quality</h2>${quality.map(qRow).join('')}<div class="seeall" onclick="gotoScreenerSort('garp',-1,0)">See all in Screener →</div></div>
-      <div class="section"><h2>Most Undervalued</h2><p class="ov-sub">Solid+ names, by analyst upside</p>${undervalued.map(upRow).join('')||'<p class="ov-sub">—</p>'}<div class="seeall" onclick="gotoScreenerSort('upside',-1,0.6)">See all in Screener →</div></div>
+      <div class="section"><h2>Highest Analyst Upside</h2><p class="ov-sub">Solid+ names, by analyst upside</p>${undervalued.map(upRow).join('')||'<p class="ov-sub">—</p>'}<div class="seeall" onclick="gotoScreenerSort('upside',-1,0.6)">See all in Screener →</div></div>
       <div class="section"><h2>Quality on Sale</h2><p class="ov-sub">Solid+ names furthest below 52-wk high</p>${onsale.map(saleRow).join('')||'<p class="ov-sub">—</p>'}<div class="seeall" onclick="gotoScreenerSort('distHigh',1,0.6)">See all in Screener →</div></div>
     </div>
     <div class="section">

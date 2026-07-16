@@ -4,7 +4,7 @@ Built by **Bar Barzilay** — [LinkedIn](https://www.linkedin.com/in/bar-barzila
 
 A live, single-page **equity research terminal** covering ~117 major US companies. It has four modes:
 
-- **Market Overview** — a GARP-quality heatmap by sector plus leaderboards (Highest Quality, Most Undervalued, Quality on Sale).
+- **Market Overview** — a GARP-quality heatmap by sector plus leaderboards (Highest Quality, Highest Analyst Upside, Quality on Sale).
 - **Screener & Leaderboard** — sort and filter the whole universe by any metric or GARP score.
 - **Compare** — put 2–3 companies side by side, best value per row highlighted.
 - **Research** — type any company or ticker for a full report, organized into sub-tabs: a graded GARP
@@ -48,7 +48,7 @@ no secrets, and never hits an API rate limit during a demo.
 ## The GARP scorecard
 
 Each company is scored on eight quality-and-value criteria: revenue growth, Rule of 40, FCF margin,
-net margin, return on equity, PEG, earnings re-rating (forward vs. trailing P/E), and balance-sheet
+net margin, return on equity, PEG, forward multiple discount (forward vs. trailing P/E), and balance-sheet
 leverage. The verdict band is derived from the pass rate.
 
 ## Optional AI layer
