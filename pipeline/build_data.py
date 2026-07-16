@@ -31,6 +31,8 @@ UNIVERSE = [
 ]
 UNIVERSE = list(dict.fromkeys(UNIVERSE))  # guard against accidental duplicates
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo root: data.json lives there, this script in pipeline/
+
 def num(v):
     try:
         f=float(v)
@@ -180,7 +182,7 @@ def main():
       "count": len(out),
       "companies": out,
     }
-    outpath=os.environ.get("OUT","data.json")
+    outpath=os.environ.get("OUT",os.path.join(ROOT,"data.json"))
     with open(outpath,"w") as f:
         json.dump(payload,f,separators=(",",":"))
     with open(outpath.replace("data.json","data.js"),"w") as f:

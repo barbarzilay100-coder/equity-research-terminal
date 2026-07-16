@@ -5,6 +5,10 @@ Runs in CI after the pipelines. Scalar fields only; the nested revHist / tech /
 flow blocks stay in data.json."""
 import json, os, sqlite3
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_JSON = os.path.join(ROOT, "data.json")
+DB_PATH = os.path.join(ROOT, "terminal.db")
+
 TEXT = {"ticker", "name", "sector", "industry", "rating", "impliedFrom"}
 FIELDS = ["ticker", "name", "sector", "industry", "price", "marketCap", "ev", "high52",
           "distHigh", "revGrowth", "earnGrowth", "netMargin", "grossMargin", "ebitdaMargin",
@@ -14,10 +18,10 @@ FIELDS = ["ticker", "name", "sector", "industry", "price", "marketCap", "ev", "h
           "impliedPrice", "impliedUpside", "impliedFrom"]
 
 def main():
-    payload = json.load(open("data.json"))
-    if os.path.exists("terminal.db"):
-        os.remove("terminal.db")
-    db = sqlite3.connect("terminal.db")
+    payload = json.load(open(DATA_JSON))
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+    db = sqlite3.connect(DB_PATH)
     cols = ", ".join(f"{f} {'TEXT' if f in TEXT else 'REAL'}" for f in FIELDS)
     db.execute(f"CREATE TABLE companies ({cols}, PRIMARY KEY (ticker))")
     db.execute("CREATE TABLE meta (generated TEXT, count INTEGER)")

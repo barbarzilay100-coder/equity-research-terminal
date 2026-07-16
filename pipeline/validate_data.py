@@ -12,12 +12,15 @@ Hard FAIL  -> derived field disagrees with its own inputs, duplicate ticker,
 WARN       -> source-data oddities worth eyeballing (extreme multiples or
               implied upside, margin vs FY-revenue divergence, missing sector).
 """
-import datetime, json, sys
+import datetime, json, os, sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPORT = os.path.join(ROOT, "docs", "validation-report.md")
 
 TOL_PP = 0.25   # tolerance (percentage points) for fields the pipeline rounds to 0.1
 fails, warns = [], []
 
-payload = json.load(open("data.json"))
+payload = json.load(open(os.path.join(ROOT, "data.json")))
 cos = payload["companies"]
 
 if payload["count"] != len(cos):
@@ -93,7 +96,7 @@ if warns:
     lines += ["## Warnings (source-data oddities, non-blocking)", ""] + [f"- {w}" for w in warns] + [""]
 if not fails and not warns:
     lines += ["All reconciliation and bounds checks passed with no warnings.", ""]
-with open("docs/validation-report.md", "w") as f:
+with open(REPORT, "w") as f:
     f.write("\n".join(lines))
 
 print(f"{status}: {len(fails)} failures, {len(warns)} warnings -> docs/validation-report.md")

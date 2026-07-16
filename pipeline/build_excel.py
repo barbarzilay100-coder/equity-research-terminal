@@ -12,7 +12,7 @@ prints golden values (the same math in Python) for verification.
 
 Run: python build_excel.py
 """
-import json
+import json, os
 from openpyxl import Workbook
 from openpyxl.comments import Comment
 from openpyxl.styles import Font, PatternFill
@@ -23,7 +23,10 @@ BLUE, GREEN = "0000FF", "008000"
 YELLOW = PatternFill("solid", fgColor="FFFF00")
 USD_B, USD_PS, PCT, MULT = '$#,##0.0', '$#,##0.00', '0.0%', '0.0"x"'
 
-payload = json.load(open("data.json"))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_XLSX = os.path.join(ROOT, "docs", "valuation-models.xlsx")
+
+payload = json.load(open(os.path.join(ROOT, "data.json")))
 co = {c["ticker"]: c for c in payload["companies"]}
 msft, avgo = co["MSFT"], co["AVGO"]
 peers = [c for c in payload["companies"]
@@ -155,7 +158,7 @@ for k, (label, val, fmt, color, note) in enumerate(blk):
     put(ws, f"A{r+k}", label)
     put(ws, f"B{r+k}", val, fmt, color=color, bold=(k in (6, 8)), key=(k == 6), note=note)
 
-wb.save("docs/valuation-models.xlsx")
+wb.save(OUT_XLSX)
 
 # ---------------- Golden values (same math in Python) ----------------
 def dcf_ps(wacc, g5, gt):

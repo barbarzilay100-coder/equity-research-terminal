@@ -19,7 +19,7 @@ try:
 except ImportError:   # pure helpers stay importable (and unit-testable) without yfinance
     yf = None
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo root: data.json lives there, this script in pipeline/
 PARTIAL_DIR = os.environ.get("FLOW_PARTIAL_DIR", "/tmp/flow_partials")
 
 
@@ -182,7 +182,7 @@ def compute_flow(ticker):
 
 
 def load_data():
-    with open(os.path.join(HERE, "data.json")) as f:
+    with open(os.path.join(ROOT, "data.json")) as f:
         return json.load(f)
 
 
@@ -219,9 +219,9 @@ def phase_merge():
             c["flow"] = flow_map[c["ticker"]]
             hit += 1
     data["flowGenerated"] = datetime.datetime.now(datetime.timezone.utc).strftime("%b %d, %Y")
-    with open(os.path.join(HERE, "data.json"), "w") as f:
+    with open(os.path.join(ROOT, "data.json"), "w") as f:
         json.dump(data, f, separators=(",", ":"))
-    with open(os.path.join(HERE, "data.js"), "w") as f:
+    with open(os.path.join(ROOT, "data.js"), "w") as f:
         f.write("window.DATA = " + json.dumps(data, separators=(",", ":")) + ";\n")
     print(f"MERGED flow into {hit}/{len(data['companies'])} companies -> data.json / data.js")
 

@@ -35,7 +35,7 @@ criteria" to keep this visible.
 
 ## Relative valuation (implied value)
 
-The pipeline computes a sector-relative implied value per company (`build_data.py`,
+The pipeline computes a sector-relative implied value per company (`pipeline/build_data.py`,
 `add_valuations`):
 
 1. Take the company's sector peers (universe members in the same Yahoo sector, excluding
@@ -58,7 +58,7 @@ snapshot is not a fairness opinion — this is a screening signal, not a price t
 - **Single source.** All fundamentals come from Yahoo Finance via `yfinance`. There is no
   second vendor to reconcile against, and Yahoo's field definitions (e.g. what lands in
   `totalDebt`) are not always documented. To contain this, every refresh runs
-  `validate_data.py`: derived fields are recomputed from their inputs (hard failures block
+  `pipeline/validate_data.py`: derived fields are recomputed from their inputs (hard failures block
   the commit) and source-data oddities are reported in `docs/validation-report.md` — but a
   wrong-but-internally-consistent Yahoo number still flows through.
 - **PEG definition.** Yahoo's `trailingPegRatio` uses an ~5-year expected earnings-growth
