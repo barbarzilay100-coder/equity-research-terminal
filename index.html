@@ -705,7 +705,7 @@ function run(){
 function renderMarket(){
   const bySec={};
   DB.companies.forEach(c=>{ (bySec[c.sector]=bySec[c.sector]||[]).push(c); });
-  const sectors=Object.keys(bySec).map(s=>{
+  const sectors=Object.keys(bySec).filter(s=>s&&s!=='—').map(s=>{  // unclassified is not a sector — keep it off the heatmap
     const arr=bySec[s];
     const avgRatio=arr.reduce((a,c)=>a+c._sc.ratio,0)/arr.length;
     const rg=arr.map(c=>c.revGrowth).filter(v=>v!=null);
