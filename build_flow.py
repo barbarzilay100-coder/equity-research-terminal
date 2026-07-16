@@ -14,7 +14,10 @@ Two phases so it survives short shells / rate limits:
     python build_flow.py merge             # fold into data.json / data.js
 """
 import json, sys, os, glob, datetime
-import yfinance as yf
+try:
+    import yfinance as yf
+except ImportError:   # pure helpers stay importable (and unit-testable) without yfinance
+    yf = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PARTIAL_DIR = os.environ.get("FLOW_PARTIAL_DIR", "/tmp/flow_partials")
@@ -38,6 +41,42 @@ def _int(v):
         return int(round(f))
     except Exception:
         return None
+
+
+def classify_insider(blob):
+    """Map a raw Form-4 transaction description to a display type.
+    Order matters: sale wording wins over the 'stock' in 'stock option', and
+    gifts/exercises/grants are separated out so they never read as real buys."""
+    blob = blob.lower()
+    if "sale" in blob or "sold" in blob or "sell" in blob:
+        return "Sell"
+    if "purchase" in blob or "bought" in blob or "buy" in blob:
+        return "Buy"
+    if "gift" in blob:
+        return "Gift"
+    if "exercise" in blob or "option" in blob:
+        return "Exercise"
+    if "award" in blob or "grant" in blob or "acqui" in blob:
+        return "Grant"
+    return "Other"
+
+
+def open_market_summary(rows):
+    """Count/value of genuine open-market Purchases vs Sales from (text, value)
+    pairs — grants, awards, gifts and option exercises are excluded, since they
+    pollute the raw buy count. Returns None when no open-market activity."""
+    buyN = sellN = 0
+    buyV = sellV = 0.0
+    for text, val in rows:
+        low = str(text or "").lower()
+        val = float(val) if val is not None and val == val else 0.0
+        if "purchase" in low:
+            buyN += 1; buyV += val
+        elif "sale" in low:
+            sellN += 1; sellV += val
+    if buyN or sellN:
+        return {"buyN": buyN, "buyVal": int(buyV), "sellN": sellN, "sellVal": int(sellV)}
+    return None
 
 
 def compute_flow(ticker):
@@ -116,19 +155,8 @@ def compute_flow(ticker):
             if it is not None and not it.empty:
                 recent = []
                 for _, r in it.head(6).iterrows():
-                    blob = (str(r.get("Transaction") or "") + " " + str(r.get("Text") or "")).lower()
-                    if "sale" in blob or "sold" in blob or "sell" in blob:
-                        typ = "Sell"
-                    elif "purchase" in blob or "bought" in blob or "buy" in blob:
-                        typ = "Buy"
-                    elif "gift" in blob:
-                        typ = "Gift"
-                    elif "exercise" in blob or "option" in blob:
-                        typ = "Exercise"
-                    elif "award" in blob or "grant" in blob or "acqui" in blob:
-                        typ = "Grant"
-                    else:
-                        typ = "Other"
+                    blob = str(r.get("Transaction") or "") + " " + str(r.get("Text") or "")
+                    typ = classify_insider(blob)
                     recent.append({
                         "i": str(r.get("Insider"))[:24],
                         "pos": (str(r.get("Position"))[:22] if r.get("Position") is not None else ""),
@@ -139,20 +167,9 @@ def compute_flow(ticker):
                     })
                 out["recentInsider"] = recent
 
-                # clean open-market signal: count/value of genuine Purchases vs Sales
-                # (excludes grants, awards, gifts, option exercises that pollute the raw buy count)
-                buyN = sellN = 0
-                buyV = sellV = 0.0
-                for _, r in it.iterrows():
-                    low = str(r.get("Text") or "").lower()
-                    val = r.get("Value")
-                    val = float(val) if val is not None and val == val else 0.0
-                    if "purchase" in low:
-                        buyN += 1; buyV += val
-                    elif "sale" in low:
-                        sellN += 1; sellV += val
-                if buyN or sellN:
-                    out["om"] = {"buyN": buyN, "buyVal": int(buyV), "sellN": sellN, "sellVal": int(sellV)}
+                om = open_market_summary((r.get("Text"), r.get("Value")) for _, r in it.iterrows())
+                if om:
+                    out["om"] = om
         except Exception:
             pass
 
@@ -201,7 +218,7 @@ def phase_merge():
         if c["ticker"] in flow_map:
             c["flow"] = flow_map[c["ticker"]]
             hit += 1
-    data["flowGenerated"] = datetime.datetime.utcnow().strftime("%b %d, %Y")
+    data["flowGenerated"] = datetime.datetime.now(datetime.timezone.utc).strftime("%b %d, %Y")
     with open(os.path.join(HERE, "data.json"), "w") as f:
         json.dump(data, f, separators=(",", ":"))
     with open(os.path.join(HERE, "data.js"), "w") as f:

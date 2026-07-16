@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: '20'
       - run: pip install -r requirements.txt
+      - name: Pipeline unit tests
+        run: python -m pytest -q tests/test_pipeline.py
       - name: Build fundamentals (aborts if fewer than MIN_COUNT companies fetched)
         if: github.event_name != 'push'
         run: python build_data.py                # fundamentals -> data.json / data.js

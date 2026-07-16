@@ -4,7 +4,10 @@ Pulls fundamentals via yfinance for a universe of tickers and writes data.json.
 Runs locally or in GitHub Actions (daily). No API key required.
 """
 import json, sys, time, datetime, os
-import yfinance as yf
+try:
+    import yfinance as yf
+except ImportError:   # pure helpers stay importable (and unit-testable) without yfinance
+    yf = None
 
 UNIVERSE = [
     # Mega-cap tech
@@ -33,7 +36,7 @@ def num(v):
         f=float(v)
         if f!=f: return None
         return f
-    except: return None
+    except Exception: return None
 
 def to_b(v):
     v=num(v)
