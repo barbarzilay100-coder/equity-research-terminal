@@ -12,6 +12,10 @@ A live, single-page **equity research terminal** covering ~117 major US companie
 
 **Live demo:** https://barbarzilay100-coder.github.io/equity-research-terminal/
 
+![Market Overview — GARP heatmap by sector](docs/market-overview.jpg)
+
+![Research report — graded scorecard and sub-tabs](docs/research-report.jpg)
+
 ## How it works
 
 The app is fully static (hosts on GitHub Pages), yet always current, thanks to a three-part design:
