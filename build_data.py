@@ -23,6 +23,8 @@ UNIVERSE = [
     # Industrial / energy / other
     "XOM","CVX","CAT","BA","GE","HON","UPS","RTX","DE","LMT","UNP","LIN","NEE",
     "T","VZ","TMUS","CMCSA",
+    # Israeli dual-listed (NASDAQ/NYSE + TASE)
+    "TEVA","NICE","CHKP","WIX","MNDY","CYBR","ESLT",
 ]
 UNIVERSE = list(dict.fromkeys(UNIVERSE))  # guard against accidental duplicates
 
