@@ -29,6 +29,7 @@ A live, single-page **equity research terminal** covering ~117 major US companie
 | CI-gated end-to-end test — a data refresh only ships if every check passes | Accuracy & attention to detail |
 | Sector heatmap, screener, leaderboards, side-by-side compare | BI dashboards & data visualization |
 | [Excel valuation workbook](docs/valuation-models.xlsx) — 5-yr DCF + trading comps, named ranges, sensitivity table | Advanced Excel & financial modeling |
+| SQLite snapshot (`terminal.db`) + [windowed analytical queries](sql/queries.sql) | SQL |
 
 ## How it works
 
@@ -67,6 +68,27 @@ A companion workbook, [docs/valuation-models.xlsx](docs/valuation-models.xlsx) �
 named-range assumptions and a WACC × terminal-growth sensitivity table, plus a semiconductor
 trading-comps sheet that reprices Broadcom at peer-median multiples. All model math lives in
 live Excel formulas: change a lever and the workbook recalculates.
+
+## SQL layer
+
+The pipeline also writes **`terminal.db`** (via `build_db.py`) — a SQLite snapshot of the
+universe, refreshed with every data run — so everything the site shows is queryable with
+plain SQL. [sql/queries.sql](sql/queries.sql) holds five analytical queries; for example,
+top-quartile ROE within each sector via a window function:
+
+```sql
+SELECT sector, ticker, roe
+FROM (SELECT sector, ticker, roe,
+             NTILE(4) OVER (PARTITION BY sector ORDER BY roe DESC) AS quartile
+      FROM companies WHERE roe IS NOT NULL)
+WHERE quartile = 1
+ORDER BY sector, roe DESC;
+```
+
+The others: sector growth/profitability profiles, a double-confirmation screen (names where
+both the sector-relative implied valuation and analyst consensus see >10% upside), best
+FCF-margin names per sector with `RANK()`, and a PEG × ROE value-vs-quality quadrant
+aggregation. Run them with `sqlite3 terminal.db < sql/queries.sql`.
 
 ## Optional AI layer
 

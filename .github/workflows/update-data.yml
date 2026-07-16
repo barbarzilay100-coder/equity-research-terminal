@@ -36,6 +36,9 @@ jobs:
         run: |
           python build_flow.py fetch 0 200       # institutional + 13F changes + insider Form 4
           python build_flow.py merge             # fold flow into data.json / data.js
+      - name: Write SQLite snapshot
+        if: github.event_name != 'push'
+        run: python build_db.py                # data.json -> terminal.db
       - name: End-to-end test (gate — bad data or a broken app never gets committed)
         run: |
           npm install --no-save jsdom
@@ -45,6 +48,6 @@ jobs:
         run: |
           git config user.name  "data-bot"
           git config user.email "actions@github.com"
-          git add data.json data.js
+          git add data.json data.js terminal.db
           git commit -m "Auto: refresh market data ($(date -u +%F))" || echo "no changes"
           git push
