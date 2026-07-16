@@ -54,6 +54,9 @@ as failures — Rule of 40 applies only to growth sectors, and FCF margin / debt
 Financial Services — so each score is shown out of its applicable count. The verdict band is derived
 from the pass rate.
 
+Every threshold, its source, and the model's limitations are documented in
+[docs/METHODOLOGY.md](docs/METHODOLOGY.md).
+
 ## Optional AI layer
 
 The Investment Memo is auto-generated from the data and scorecard. Paste an Anthropic API key on the
