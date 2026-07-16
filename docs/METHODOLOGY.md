@@ -33,6 +33,26 @@ were tested against different (and differently difficult) criteria sets. The ver
 compare pass *rates*, not identical exams. The scorecard displays "X of Y applicable
 criteria" to keep this visible.
 
+## Relative valuation (implied value)
+
+The pipeline computes a sector-relative implied value per company (`build_data.py`,
+`add_valuations`):
+
+1. Take the company's sector peers (universe members in the same Yahoo sector, excluding
+   the company itself). At least 4 peers with a valid multiple are required, else the
+   method is skipped.
+2. **EV/EBITDA route** — reprice the company's EBITDA (derived as EV ÷ EV/EBITDA) at the
+   peer-median EV/EBITDA, subtract debt, add cash → implied equity → implied price.
+3. **Forward P/E route** — reprice the company's forward EPS (price ÷ forward P/E) at the
+   peer-median forward P/E → implied price.
+4. Blend: the implied price is the simple average of whichever routes were available; the
+   Valuation tab shows it against the market price and the analyst consensus target.
+
+Caveats: sector is a coarse peer group (a payments network and a regional bank are both
+"Financial Services"); medians inherit every Yahoo data quirk; for financials only the
+forward P/E route usually exists (EV/EBITDA is undefined for banks); and a one-day multiple
+snapshot is not a fairness opinion — this is a screening signal, not a price target.
+
 ## Data limitations
 
 - **Single source.** All fundamentals come from Yahoo Finance via `yfinance`. There is no

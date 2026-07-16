@@ -8,7 +8,8 @@ A live, single-page **equity research terminal** covering ~117 major US companie
 - **Screener & Leaderboard** — sort and filter the whole universe by any metric or GARP score.
 - **Compare** — put 2–3 companies side by side, best value per row highlighted.
 - **Research** — type any company or ticker for a full report, organized into sub-tabs: a graded GARP
-  scorecard + investment memo, financials, valuation & analyst targets, a technicals tab (50/200-day
+  scorecard + investment memo, financials, valuation & analyst targets — including a sector-relative
+  implied value computed in the pipeline from peer-median EV/EBITDA and forward P/E — a technicals tab (50/200-day
   moving averages + RSI signals), and a **Smart Money** tab (institutional ownership, 13F position
   changes, and insider buying/selling).
 
@@ -23,7 +24,8 @@ A live, single-page **equity research terminal** covering ~117 major US companie
 | Feature | Skill it proves |
 |---|---|
 | `build_data.py` / `build_prices.py` / `build_flow.py` — yfinance data pipelines | Python, data acquisition & cleaning |
-| Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis & valuation |
+| Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis |
+| Sector-relative implied valuation — peer-median EV/EBITDA & forward P/E repricing | Relative valuation (comps) |
 | CI-gated end-to-end test — a data refresh only ships if every check passes | Accuracy & attention to detail |
 | Sector heatmap, screener, leaderboards, side-by-side compare | BI dashboards & data visualization |
 

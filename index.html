@@ -538,6 +538,16 @@ function valuationHTML(d){
         <td class="${sign(d.upside)}">${pct(d.upside)}</td>
       </tr></tbody>
     </table>`:''}
+    ${d.impliedPrice?`
+    <table style="margin-top:20px">
+      <thead><tr><th>Relative Valuation — sector-median ${d.impliedFrom}</th><th>Value</th><th>vs. Price</th></tr></thead>
+      <tbody>
+        <tr><td>Implied value (peer multiples)</td><td><b>${fmtUSD(d.impliedPrice)}</b></td><td class="${sign(d.impliedUpside)}">${pct(d.impliedUpside)}</td></tr>
+        <tr><td>Market price</td><td>${fmtUSD(d.price)}</td><td>—</td></tr>
+        ${d.ptAvg?`<tr><td>Analyst consensus target</td><td>${fmtUSD(d.ptAvg)}</td><td class="${sign(d.upside)}">${pct(d.upside)}</td></tr>`:''}
+      </tbody>
+    </table>
+    <p class="ov-sub" style="margin-top:8px">Implied value reprices this company at its sector peers' median multiples (peers exclude the company itself) — methodology and caveats in the repo's METHODOLOGY doc.</p>`:''}
   </div>`;
 }
 

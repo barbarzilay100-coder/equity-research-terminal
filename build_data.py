@@ -114,6 +114,37 @@ def build(tk):
     }
     return d
 
+def add_valuations(companies):
+    """Sector-relative valuation: reprice each company at its sector peers'
+    median EV/EBITDA and forward P/E (peers exclude the company itself),
+    blend the implied prices, and store impliedPrice / impliedUpside.
+    Self-contained on purpose — it must run on an already-built company list
+    without touching the network."""
+    MIN_PEERS=4
+    def median(xs):
+        xs=sorted(xs); n=len(xs)
+        return xs[n//2] if n%2 else (xs[n//2-1]+xs[n//2])/2
+    by_sector={}
+    for c in companies:
+        by_sector.setdefault(c.get("sector"),[]).append(c)
+    for peers in by_sector.values():
+        for c in peers:
+            ee=[p["evEbitda"] for p in peers if p is not c and p.get("evEbitda") and p["evEbitda"]>0]
+            fp=[p["forwardPE"] for p in peers if p is not c and p.get("forwardPE") and p["forwardPE"]>0]
+            implied=[]; used=[]
+            if len(ee)>=MIN_PEERS and c.get("evEbitda") and c["evEbitda"]>0 and c.get("ev") and c.get("marketCap") and c.get("price"):
+                ebitda=c["ev"]/c["evEbitda"]                                   # $B
+                eq=median(ee)*ebitda-(c.get("debt") or 0)+(c.get("cash") or 0) # implied equity, $B
+                if eq>0 and c["marketCap"]>0:
+                    implied.append(eq/c["marketCap"]*c["price"]); used.append("EV/EBITDA")
+            if len(fp)>=MIN_PEERS and c.get("forwardPE") and c["forwardPE"]>0 and c.get("price"):
+                implied.append(median(fp)*c["price"]/c["forwardPE"]); used.append("Fwd P/E")
+            if implied:
+                ip=sum(implied)/len(implied)
+                c["impliedPrice"]=round(ip,2)
+                c["impliedUpside"]=round((ip-c["price"])/c["price"]*100,1)
+                c["impliedFrom"]=" + ".join(used)
+
 def main():
     if len(sys.argv)>1:
         tickers=sys.argv[1:]
@@ -138,6 +169,7 @@ def main():
     if len(sys.argv)<=1 and len(tickers)>=min_count and len(out)<min_count:
         print(f"\nABORT  only {len(out)}/{len(tickers)} companies fetched (< MIN_COUNT={min_count}); not writing output.")
         sys.exit(1)
+    add_valuations(out)
     payload={
       "generated": datetime.datetime.now(datetime.timezone.utc).strftime("%b %d, %Y"),
       "count": len(out),
