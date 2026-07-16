@@ -49,7 +49,10 @@ no secrets, and never hits an API rate limit during a demo.
 
 Each company is scored on eight quality-and-value criteria: revenue growth, Rule of 40, FCF margin,
 net margin, return on equity, PEG, forward multiple discount (forward vs. trailing P/E), and balance-sheet
-leverage. The verdict band is derived from the pass rate.
+leverage. Criteria that don't fit a sector's business model are excluded per company rather than counted
+as failures — Rule of 40 applies only to growth sectors, and FCF margin / debt-to-equity are skipped for
+Financial Services — so each score is shown out of its applicable count. The verdict band is derived
+from the pass rate.
 
 ## Optional AI layer
 

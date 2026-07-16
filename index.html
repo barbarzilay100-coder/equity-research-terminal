@@ -83,6 +83,7 @@
   .scorebadge{display:flex;align-items:center;gap:14px}
   .scorenum{font-size:40px;font-weight:800;color:var(--navy)}
   .scorenum span{font-size:20px;color:var(--muted)}
+  .scoresub{font-size:12px;color:var(--muted);margin-top:4px}
   .verdict{padding:8px 16px;border-radius:24px;font-weight:700;font-size:14px}
   .v-strong{background:var(--greenbg);color:var(--green)}
   .v-solid{background:#eef6ff;color:#2b6cb0}
@@ -287,6 +288,15 @@ function shortVerdict(r){
 function heatColor(r){ const hue=Math.round(Math.max(0,Math.min(1,r))*130); return {bg:`hsl(${hue},58%,90%)`,fg:`hsl(${hue},72%,25%)`}; }
 
 /* ============================ SCORECARD ============================ */
+/* Rule of 40 is a growth-software metric; FCF margin and debt/equity are not
+   meaningful for banks and insurers, whose balance sheet IS the business —
+   so those criteria are excluded per sector rather than counted as failures. */
+const GROWTH_SECTORS=new Set(["Technology","Communication Services"]);
+function criterionApplies(name,sector){
+  if(sector==="Financial Services"&&(name==="Rule of 40"||name==="FCF Margin"||name==="Balance Sheet")) return false;
+  if(name==="Rule of 40"&&!GROWTH_SECTORS.has(sector)) return false;
+  return true;
+}
 function buildChecklist(d){
   const ruleOf40=(d.revGrowth!=null&&d.fcfMargin!=null)?d.revGrowth+d.fcfMargin:null;
   const rerate=(d.forwardPE!=null&&d.pe!=null)?d.pe-d.forwardPE:null;
@@ -303,6 +313,8 @@ function buildChecklist(d){
   let pass=0,counted=0;
   const rows=C.map(c=>{
     let st='na';
+    if(!criterionApplies(c.name,d.sector))
+      return {name:c.name,thr:c.thr,disp:'Not applicable — '+(d.sector||'unclassified'),st:'skip'};
     if(c.val!=null&&!isNaN(c.val)){counted++; if(c.pass(c.val)){pass++;st='pass';}else st='fail';}
     return {name:c.name,thr:c.thr,disp:c.disp,st};
   });
@@ -328,7 +340,7 @@ function memoFromData(d,sc){
   const strengths=sc.rows.filter(r=>r.st==='pass').map(r=>`${r.name} — ${r.disp}`);
   const watch=sc.rows.filter(r=>r.st==='fail').map(r=>`${r.name} — ${r.disp} (below threshold)`);
   const vd=verdict(sc.pass,sc.counted);
-  const bl=`${d.name} scores <b>${sc.pass}/${sc.counted}</b> on the GARP scorecard — ${vd.label.toLowerCase()}. `+
+  const bl=`${d.name} scores <b>${sc.pass}/${sc.counted}</b> on the applicable GARP criteria — ${vd.label.toLowerCase()}. `+
     `Revenue is growing ${pct(d.revGrowth)} with a ${ppct(d.netMargin)} net margin, and the stock trades at ${x(d.forwardPE)} forward earnings`+
     (d.peg!=null?` (PEG ${d.peg.toFixed(2)})`:'')+`. Currently ${pct(d.distHigh)} from its 52-week high.`;
   return {
@@ -436,6 +448,7 @@ function scorecardHTML(d,sc){
     <div class="scorehead"><div class="scorebadge">
       <div class="scorenum">${sc.pass}<span>/${sc.counted}</span></div>
       <div class="verdict ${vd.cls}">${vd.label}</div>
+      <div class="scoresub">${sc.pass} of ${sc.counted} applicable criteria passed${(n=>n?` · ${n} not applicable for ${d.sector}`:'')(sc.rows.filter(r=>r.st==='skip').length)}</div>
     </div></div>
     ${sc.rows.map(r=>`
       <div class="check">
