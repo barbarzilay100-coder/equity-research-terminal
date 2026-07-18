@@ -38,6 +38,11 @@ jobs:
         run: |
           python pipeline/build_flow.py fetch 0 200     # institutional + 13F changes + insider Form 4
           python pipeline/build_flow.py merge           # fold flow into data.json / data.js
+      - name: Enrich with SEC filings (Deal Radar)
+        if: github.event_name != 'push'
+        run: |
+          python pipeline/build_events.py fetch 0 200   # 8-K items, S-4/425, 13D/G via EDGAR
+          python pipeline/build_events.py merge         # fold events into data.json / data.js
       - name: Write SQLite snapshot
         if: github.event_name != 'push'
         run: python pipeline/build_db.py       # data.json -> terminal.db

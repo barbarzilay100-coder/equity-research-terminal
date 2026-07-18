@@ -53,6 +53,32 @@ Caveats: sector is a coarse peer group (a payments network and a regional bank a
 forward P/E route usually exists (EV/EBITDA is undefined for banks); and a one-day multiple
 snapshot is not a fairness opinion — this is a screening signal, not a price target.
 
+## SEC filings classification (Deal Radar)
+
+The `events` block is built from the free SEC EDGAR submissions API
+(`data.sec.gov/submissions/`), which lists every filing with its form type and — for 8-Ks —
+the item codes the filer declared. Classification uses only those two fields; no filing text
+is parsed and no AI is involved, so the result is fully deterministic and reproducible:
+
+| Signal | Source |
+|---|---|
+| M&A / disposition completed | 8-K item 2.01 |
+| Material agreement signed / terminated | 8-K item 1.01 / 1.02 |
+| Leadership change | 8-K item 5.02 |
+| Results announced | 8-K item 2.02 (2.03 debt, 3.01 listing) |
+| Merger-related filing | S-4, F-4, 425, DEFM14A/PREM14A, SC TO-*, SC 14D9 |
+| Activist stake | SC 13D + amendments |
+| New passive >5% stake | SC 13G (initial filings only) |
+| Periodic report | 10-K, 10-Q, 20-F |
+
+Known limits, by construction: an 8-K item code says *that* something happened, not *what*
+(item 1.01 covers any material agreement, not only deal-related ones); 8-Ks filed only under
+items 7.01/8.01 are skipped even when the underlying news is significant; 13G **amendments**
+are excluded as noise, so stake *increases* by passive holders don't surface; foreign private
+issuers (the Israeli dual-listed names) report on 6-K, which carries no item codes and is
+skipped, so they show fewer events; and the window is ~6 months with a per-company cap, both
+set in `pipeline/build_events.py`.
+
 ## Data limitations
 
 - **Single source.** All fundamentals come from Yahoo Finance via `yfinance`. There is no

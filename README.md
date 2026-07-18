@@ -10,8 +10,12 @@ A live, single-page **equity research terminal** covering ~125 major US companie
 - **Research** — type any company or ticker for a full report, organized into sub-tabs: a graded GARP
   scorecard + investment memo, financials, valuation & analyst targets — including a sector-relative
   implied value computed in the pipeline from peer-median EV/EBITDA and forward P/E — a technicals tab (50/200-day
-  moving averages + RSI signals), and a **Smart Money** tab (institutional ownership, 13F position
-  changes, and insider buying/selling).
+  moving averages + RSI signals), a **Smart Money** tab (institutional ownership, 13F position
+  changes, and insider buying/selling), and a **Filings** tab — six months of SEC filings per company,
+  classified from EDGAR form types and 8-K item codes.
+- **Deal Radar** — a Market Overview board of M&A completions, merger-related filings (S-4/425/tender offers)
+  and new activist / >5% stakes (13D/G) across the whole universe, sourced from SEC EDGAR and classified
+  deterministically — no text parsing, no AI.
 
 **Live demo:** https://barbarzilay100-coder.github.io/equity-research-terminal/
 
@@ -24,6 +28,7 @@ A live, single-page **equity research terminal** covering ~125 major US companie
 | Feature | Skill it proves |
 |---|---|
 | `pipeline/build_data.py` / `pipeline/build_prices.py` / `pipeline/build_flow.py` — yfinance data pipelines | Python, data acquisition & cleaning |
+| `pipeline/build_events.py` — SEC EDGAR filings pipeline; Deal Radar built from 8-K item codes, S-4/425, 13D/G | M&A awareness, working with primary sources |
 | Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis |
 | Sector-relative implied valuation — peer-median EV/EBITDA & forward P/E repricing | Relative valuation (comps) |
 | CI-gated e2e test + [data validation](docs/validation-report.md) — reconciliation & bounds checks gate every refresh | Accuracy, reconciliation & attention to detail |
@@ -41,9 +46,13 @@ The app is fully static (hosts on GitHub Pages), yet always current, thanks to a
    series, 50- and 200-day moving averages, and a 14-day RSI (used for the price chart and signals).
 3. **`pipeline/build_flow.py`** — adds a `flow` block of "smart money" signals: institutional ownership,
    quarter-over-quarter 13F position changes, and insider (Form 4) buying/selling.
-4. **GitHub Actions** (`.github/workflows/update-data.yml`) — runs all three pipelines automatically every
+4. **`pipeline/build_events.py`** — adds an `events` block from the free **SEC EDGAR** submissions API:
+   every recent filing classified deterministically by form type and 8-K item code (M&A completions,
+   merger filings, activist stakes, leadership changes, results), powering the Deal Radar board and
+   the per-company Filings tab.
+5. **GitHub Actions** (`.github/workflows/update-data.yml`) — runs all four pipelines automatically every
    weekday morning and commits the refreshed `data.json`/`data.js`, so the site never goes stale.
-5. **`index.html`** — a zero-dependency front end that loads `data.js` and renders every view,
+6. **`index.html`** — a zero-dependency front end that loads `data.js` and renders every view,
    including a deterministic **GARP scorecard** (pass/fail against defined thresholds).
 
 Because the numbers are pre-computed and committed, the site loads instantly, works offline, exposes
@@ -73,7 +82,8 @@ live Excel formulas: change a lever and the workbook recalculates.
 
 The pipeline also writes **`terminal.db`** (via `pipeline/build_db.py`) — a SQLite snapshot of the
 universe, refreshed with every data run — so everything the site shows is queryable with
-plain SQL. [sql/queries.sql](sql/queries.sql) holds five analytical queries; for example,
+plain SQL. Besides the scalar `companies` table it carries an `events` table of classified SEC
+filings. [sql/queries.sql](sql/queries.sql) holds six analytical queries; for example,
 top-quartile ROE within each sector via a window function:
 
 ```sql
@@ -87,8 +97,9 @@ ORDER BY sector, roe DESC;
 
 The others: sector growth/profitability profiles, a double-confirmation screen (names where
 both the sector-relative implied valuation and analyst consensus see >10% upside), best
-FCF-margin names per sector with `RANK()`, and a PEG × ROE value-vs-quality quadrant
-aggregation. Run them with `sqlite3 terminal.db < sql/queries.sql`.
+FCF-margin names per sector with `RANK()`, a PEG × ROE value-vs-quality quadrant
+aggregation, and a Deal Radar screen joining recent M&A / activist filings back to each
+company's valuation. Run them with `sqlite3 terminal.db < sql/queries.sql`.
 
 ## Optional AI layer
 
