@@ -61,6 +61,11 @@
     color:var(--muted);font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
   .subtab:hover{border-color:var(--gold);color:var(--navy)}
   .subtab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .evbadge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .ev-deal{background:var(--navy);color:#fff}
+  .ev-note{background:#faf3e0;color:#8a6d1f;border:1px solid var(--gold)}
+  .ev-mgmt{background:#fdeeee;color:#c0392b}
+  .ev-routine{background:#eef1f5;color:#6b7787}
 
   .section{background:var(--card);border-radius:14px;padding:24px 26px;margin-top:16px;border:1px solid var(--line)}
   .section h2{font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);
@@ -608,6 +613,35 @@ function smartMoneyHTML(d){
   </div>`;
 }
 
+/* ============================ SEC FILINGS / DEAL RADAR ============================ */
+// category -> [badge class, short tag]; labels themselves come from the pipeline
+const EV_META={ma:['ev-deal','M&A'],merger:['ev-deal','Merger'],activist:['ev-deal','Activist'],stake:['ev-deal','5% stake'],
+  agmt:['ev-note','Agreement'],debt:['ev-note','Debt'],listing:['ev-note','Listing'],
+  mgmt:['ev-mgmt','Leadership'],results:['ev-routine','Results'],periodic:['ev-routine','Periodic']};
+function fmtEvDate(iso){ return new Date(iso+'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'}); }
+function evUrl(cik,a,p){ const base=`https://www.sec.gov/Archives/edgar/data/${cik}/${a}/`;
+  return p?base+p:base+`${a.slice(0,10)}-${a.slice(10,12)}-${a.slice(12)}-index.htm`; }
+function filingsHTML(d){
+  const ev=d.events;
+  if(!ev||!(ev.list||[]).length) return '<div class="section"><h2>SEC Filings <span class="badge-src">EDGAR</span></h2><p class="ov-sub">No classified filings in the last six months.</p></div>';
+  const nDeal=ev.list.filter(e=>['ma','merger','activist','stake'].includes(e.c)).length;
+  const nMgmt=ev.list.filter(e=>e.c==='mgmt').length;
+  let pills='';
+  if(nDeal) pills+=`<span class="tpill tp-up">${nDeal} deal-related filing${nDeal>1?'s':''}</span>`;
+  if(nMgmt) pills+=`<span class="tpill tp-dn">${nMgmt} leadership change${nMgmt>1?'s':''}</span>`;
+  const rows=ev.list.map(e=>{ const m=EV_META[e.c]||['ev-routine',e.c];
+    return `<tr><td style="white-space:nowrap">${fmtEvDate(e.d)}</td><td style="white-space:nowrap">${e.f}</td>
+      <td style="text-align:left"><span class="evbadge ${m[0]}">${m[1]}</span> ${e.l}${e.i?` <span class="badge-src" title="8-K item codes as listed by EDGAR">items ${e.i}</span>`:''}</td>
+      <td><a href="${evUrl(ev.cik,e.a,e.p)}" target="_blank" rel="noopener">View →</a></td></tr>`; }).join('');
+  return `
+  <div class="section">
+    <h2>SEC Filings — Deal Radar <span class="badge-src">EDGAR · last ~6 months · ${DB.evGenerated||DB.generated}</span></h2>
+    ${pills?`<div class="techsig">${pills}</div>`:''}
+    <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Form</th><th style="text-align:left">Event</th><th>Filing</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="ov-sub" style="margin-top:18px">Classified deterministically from EDGAR form types and 8-K item codes — no text analysis, no AI. Routine noise (Form 4/144, prospectuses, 13G amendments) is filtered out; foreign private issuers (6-K filers) show fewer events by construction.</p>
+  </div>`;
+}
+
 /* ============================ RENDER (single-company research) ============================ */
 function render(d){
   const sc=buildChecklist(d);
@@ -620,18 +654,20 @@ function render(d){
     <button class="subtab" data-rt="valuation" onclick="reportTab('valuation')">Valuation</button>
     ${d.tech?`<button class="subtab" data-rt="technicals" onclick="reportTab('technicals')">Technicals</button>`:''}
     ${d.flow?`<button class="subtab" data-rt="smartmoney" onclick="reportTab('smartmoney')">Smart Money</button>`:''}
+    ${d.events?`<button class="subtab" data-rt="filings" onclick="reportTab('filings')">Filings</button>`:''}
   </div>
   <div id="rt-overview" class="rtab">${scorecardHTML(d,sc)}${memoSectionHTML(d,sc)}</div>
   <div id="rt-financials" class="rtab" style="display:none">${financialsHTML(d,sc)}</div>
   <div id="rt-valuation" class="rtab" style="display:none">${valuationHTML(d)}</div>
   <div id="rt-technicals" class="rtab" style="display:none">${technicalsHTML(d)}</div>
-  <div id="rt-smartmoney" class="rtab" style="display:none">${smartMoneyHTML(d)}</div>`;
+  <div id="rt-smartmoney" class="rtab" style="display:none">${smartMoneyHTML(d)}</div>
+  <div id="rt-filings" class="rtab" style="display:none">${filingsHTML(d)}</div>`;
   const rep=$('report'); rep.innerHTML=html; rep.style.display='block';
   rep.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function reportTab(name){
   document.querySelectorAll('#report .subtab').forEach(t=>t.classList.toggle('active',t.dataset.rt===name));
-  ['overview','financials','valuation','technicals','smartmoney'].forEach(n=>{ const el=$('rt-'+n); if(el) el.style.display=(n===name)?'block':'none'; });
+  ['overview','financials','valuation','technicals','smartmoney','filings'].forEach(n=>{ const el=$('rt-'+n); if(el) el.style.display=(n===name)?'block':'none'; });
   const d=window.__cur; if(!d)return;
   if(name==='technicals' && d.tech && !window.__drawn.px){ drawPxChart(d); window.__drawn.px=true; }
   if(name==='financials' && d.revHist && d.revHist.length>1 && !window.__drawn.rev){ drawChart(d); window.__drawn.rev=true; }
@@ -692,6 +728,7 @@ function openResearch(t, subtab){
   if(subtab) reportTab(subtab);
 }
 function openSmart(t){ openResearch(t,'smartmoney'); }
+function openFilings(t){ openResearch(t,'filings'); }
 function run(){
   if(!DB){ setStatus('Still loading data…',true); return; }
   const raw=$('ticker').value.trim();
@@ -740,6 +777,14 @@ function renderMarket(){
   const buyRow=c=>ovRow(c,`<span style="color:var(--green)">${fmtDollars(c.flow.om.buyVal)}</span><span class="miniv b-add">${c.flow.om.buyN} buy${c.flow.om.buyN>1?'s':''}</span>`,`openSmart('${c.ticker}')`);
   const sellRow=c=>ovRow(c,`<span style="color:var(--red)">${fmtDollars(c.flow.om.sellVal)}</span><span class="miniv b-trim">${c.flow.om.sellN} sell${c.flow.om.sellN>1?'s':''}</span>`,`openSmart('${c.ticker}')`);
 
+  // deal radar: latest M&A completion / merger filing / activist or >5% stake per company (EDGAR)
+  const dealCats={ma:1,merger:1,activist:1,stake:1};
+  const radar=DB.companies.map(c=>{ const evs=((c.events&&c.events.list)||[]).filter(e=>dealCats[e.c]);
+      return evs.length?{c,latest:evs[0],n:evs.length}:null; })
+    .filter(Boolean).sort((a,b)=>a.latest.d>b.latest.d?-1:a.latest.d<b.latest.d?1:0).slice(0,8);
+  const radarRow=r=>{ const m=EV_META[r.latest.c];
+    return ovRow(r.c,`<span class="evbadge ${m[0]}">${m[1]}</span><span class="miniv">${fmtEvDate(r.latest.d)}${r.n>1?' · '+r.n+' filings':''}</span>`,`openFilings('${r.c.ticker}')`); };
+
   $('view-market').innerHTML=`
     <div class="section">
       <h2>Market Overview <span class="badge-src">${DB.count} companies · ${DB.generated}</span></h2>
@@ -760,6 +805,11 @@ function renderMarket(){
         <div><div class="subhead" style="margin-top:0;color:var(--green)">▲ Insiders Buying</div>${omBuy.map(buyRow).join('')||'<p class="ov-sub">No open-market purchases in coverage.</p>'}</div>
         <div><div class="subhead" style="margin-top:0;color:var(--red)">▼ Insiders Selling</div>${omSell.map(sellRow).join('')||'<p class="ov-sub">—</p>'}</div>
       </div>
+    </div>
+    <div class="section">
+      <h2>Deal Radar — M&amp;A &amp; Corporate Events <span class="badge-src">SEC EDGAR · 8-K items, S-4/425, 13D/G · ${DB.evGenerated||DB.generated}</span></h2>
+      <p class="ov-sub">Completed acquisitions, merger-related filings and new activist / &gt;5% stakes across the coverage universe, newest first. Click a name for its full filing history.</p>
+      ${radar.map(radarRow).join('')||'<p class="ov-sub">No deal-related filings in the current window.</p>'}
     </div>`;
 }
 function ovRow(c,metricHTML,action){

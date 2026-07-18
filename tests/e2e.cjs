@@ -48,6 +48,8 @@ check('footer shows coverage count', $('footcount').textContent === String(DB.co
 check('market view rendered', $('view-market').innerHTML.includes('Market Overview'));
 check('heatmap has sector cells', $('view-market').querySelectorAll('.heatcell').length >= 5);
 check('insider-flow leaderboard rendered', $('view-market').innerHTML.includes('Smart Money'));
+check('deal radar board rendered', $('view-market').innerHTML.includes('Deal Radar'));
+check('deal radar has clickable rows', $('view-market').innerHTML.includes('openFilings('));
 
 // screener
 window.showView('screener');
@@ -78,12 +80,24 @@ check('compare highlights best cells', $('cmpOut').querySelectorAll('td.best').l
 window.openResearch('AVGO');
 check('research view opens', $('report').style.display === 'block');
 check('hero shows ticker', $('report').innerHTML.includes('AVGO'));
-['financials', 'valuation', 'technicals', 'smartmoney'].forEach(t => {
+['financials', 'valuation', 'technicals', 'smartmoney', 'filings'].forEach(t => {
   window.reportTab(t);
   const el = $('rt-' + t);
   check('sub-tab renders: ' + t, el && el.style.display === 'block' && el.innerHTML.length > 100);
 });
 check('lazy charts drawn on demand', (window.__chartsDrawn || 0) >= 2);
+
+// SEC filings / deal radar
+const evCov = DB.companies.filter(c => c.events && c.events.list && c.events.list.length).length;
+check('EDGAR events cover 100+ companies', evCov >= 100);
+const radarT = DB.companies.find(c =>
+  ((c.events && c.events.list) || []).some(e => ['ma', 'merger', 'activist', 'stake'].includes(e.c)));
+window.openFilings(radarT.ticker);
+check('openFilings jumps to Filings sub-tab',
+  window.document.querySelector('#report .subtab.active').dataset.rt === 'filings');
+check('filings table lists classified filings', $('rt-filings').querySelectorAll('tbody tr').length > 0);
+check('filing rows link to sec.gov',
+  (($('rt-filings').querySelector('tbody a') || {}).href || '').startsWith('https://www.sec.gov/Archives/edgar/data/'));
 
 // search box path
 $('ticker').value = 'Coinbase';
