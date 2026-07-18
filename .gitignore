@@ -10,3 +10,4 @@ venv/
 
 # Local scratch
 /tmp/
+*.db-journal

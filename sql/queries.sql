@@ -43,3 +43,19 @@ FROM companies
 WHERE peg IS NOT NULL AND roe IS NOT NULL
 GROUP BY 1, 2
 ORDER BY n DESC;
+
+-- 6. Deal Radar: companies with M&A / merger / stake filings (SEC EDGAR, ~6 months),
+--    joined back to valuation — does deal activity cluster in cheap or expensive names?
+SELECT e.ticker,
+       c.name,
+       c.sector,
+       COUNT(*)                                          AS deal_filings,
+       MAX(e.filing_date)                                AS latest_filing,
+       MAX(CASE WHEN e.category = 'ma' THEN 1 ELSE 0 END) AS closed_deal,
+       c.evEbitda,
+       c.upside                                          AS analyst_upside
+FROM events e
+JOIN companies c USING (ticker)
+WHERE e.category IN ('ma', 'merger', 'activist', 'stake')
+GROUP BY e.ticker
+ORDER BY latest_filing DESC, deal_filings DESC;
