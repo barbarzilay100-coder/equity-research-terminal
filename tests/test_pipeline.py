@@ -13,6 +13,7 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline"))
 
 import build_data
+import build_events
 import build_flow
 import build_prices
 
@@ -113,3 +114,61 @@ def test_open_market_summary_excludes_grants_gifts_exercises():
 def test_open_market_summary_none_when_no_trades():
     assert build_flow.open_market_summary([("Gift of shares", 1.0)]) is None
     assert build_flow.open_market_summary([]) is None
+
+
+# ---------- build_events: SEC filing classification + event selection ----------
+
+def test_classify_8k_item_priority():
+    # a deal completion outranks the routine results item on the same filing
+    assert build_events.classify_filing("8-K", "2.01,2.02,9.01") == ("ma", "M&A / disposition completed")
+    assert build_events.classify_filing("8-K", "2.02,9.01") == ("results", "Results announced")
+    assert build_events.classify_filing("8-K/A", "5.02") == ("mgmt", "Leadership change")
+    assert build_events.classify_filing("8-K", "1.02") == ("agmt", "Agreement terminated")
+
+
+def test_classify_skips_unclassifiable_8ks():
+    assert build_events.classify_filing("8-K", "7.01") is None      # Reg FD
+    assert build_events.classify_filing("8-K", "8.01,9.01") is None  # Other Events
+    assert build_events.classify_filing("8-K", "") is None
+
+
+def test_classify_forms():
+    assert build_events.classify_filing("425", "")[0] == "merger"
+    assert build_events.classify_filing("S-4", "")[0] == "merger"
+    assert build_events.classify_filing("SC 13D/A", "")[0] == "activist"
+    assert build_events.classify_filing("SC 13G", "")[0] == "stake"
+    assert build_events.classify_filing("SC 13G/A", "") is None      # amendments = noise
+    assert build_events.classify_filing("10-Q", "") == ("periodic", "10-Q filed")
+    for noise in ("4", "144", "424B2", "FWP", "6-K", "DEF 14A"):
+        assert build_events.classify_filing(noise, "") is None
+
+
+def fake_recent(rows):
+    """rows: list of (date, form, items) -> EDGAR filings.recent parallel arrays."""
+    return {
+        "filingDate":      [r[0] for r in rows],
+        "form":            [r[1] for r in rows],
+        "items":           [r[2] for r in rows],
+        "accessionNumber": [f"0000000000-26-{i:06d}" for i in range(len(rows))],
+        "primaryDocument": ["doc.htm"] * len(rows),
+    }
+
+
+def test_select_events_window_sort_and_cap():
+    import datetime
+    today = datetime.date(2026, 7, 18)
+    rows = [("2026-07-01", "8-K", "2.02,9.01"),
+            ("2026-07-10", "425", ""),
+            ("2025-01-01", "8-K", "2.01"),      # outside the window -> dropped
+            ("2026-06-01", "4", ""),            # noise form -> dropped
+            ("2026-07-15", "10-Q", "")]
+    evs = build_events.select_events(fake_recent(rows), today=today)
+    assert [e["d"] for e in evs] == ["2026-07-15", "2026-07-10", "2026-07-01"]  # newest first
+    assert [e["c"] for e in evs] == ["periodic", "merger", "results"]
+    assert all("-" not in e["a"] for e in evs)   # accession stored dash-less for URLs
+    assert evs[2]["i"] == "2.02,9.01"            # 8-K keeps its item codes
+    assert "i" not in evs[1]                     # non-8-K rows carry no items key
+    capped = build_events.select_events(
+        fake_recent([("2026-07-%02d" % (1 + i % 9), "8-K", "2.02") for i in range(20)]),
+        today=today, cap=5)
+    assert len(capped) == 5

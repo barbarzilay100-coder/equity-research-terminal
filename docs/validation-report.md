@@ -1,6 +1,6 @@
 # Data validation report
 
-Generated 2026-07-17 08:18 UTC · snapshot **Jul 17, 2026** · 122 companies
+Generated 2026-07-18 17:34 UTC · snapshot **Jul 17, 2026** · 122 companies
 Result: **PASS** — 0 hard failure(s), 15 warning(s)
 
 ## Warnings (source-data oddities, non-blocking)
