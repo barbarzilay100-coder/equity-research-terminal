@@ -36,13 +36,19 @@ function check(name, cond) {
 // boot — the appended hook runs inside the same eval scope so it can reach
 // top-level `let` bindings (in a real browser inline handlers see them natively)
 window.eval(dataJs);
-window.eval(inline + '\n;window.__setShowAll=v=>{SHOWALL=v;paintHead();paintScreener();};');
+// flag two names as a personal watchlist to exercise the watchlist filter (test-only, not committed)
+const __WATCH = ['MSFT','AAPL'];
+window.DATA.companies.forEach(c=>{ if(__WATCH.includes(c.ticker)) c.watch=true; });
+window.eval(inline + '\n;window.__setShowAll=v=>{SHOWALL=v;paintHead();paintScreener();};'
+  + '\n;window.__setWatch=v=>{WATCH_ONLY=v;paintScreener();};');
 
 const $ = id => window.document.getElementById(id);
 const DB = window.DATA;
 
 check('data loaded with 100+ companies', DB && DB.companies && DB.companies.length >= 100);
-check('footer shows coverage count', $('footcount').textContent === String(DB.count));
+const pubN = DB.companies.filter(c=>!c.watch).length;
+const watchN = DB.companies.filter(c=>c.watch).length;
+check('footer shows public coverage count', $('footcount').textContent === String(pubN));
 
 // market overview (default view)
 check('market view rendered', $('view-market').innerHTML.includes('Market Overview'));
@@ -53,7 +59,7 @@ check('deal radar has clickable rows', $('view-market').innerHTML.includes('open
 
 // screener
 window.showView('screener');
-check('screener rows = universe', $('scrBody').querySelectorAll('tr').length === DB.count);
+check('screener rows = public universe', $('scrBody').querySelectorAll('tr').length === pubN);
 window.eval("document.getElementById('scrMin').value='0.85'; paintScreener();");
 const strong = $('scrBody').querySelectorAll('tr').length;
 check('strong-only filter narrows results', strong > 0 && strong < DB.count);
@@ -61,6 +67,16 @@ window.eval("document.getElementById('scrMin').value='0';");
 window.__setShowAll(true);
 check('all-columns toggle widens table', $('scrHead').querySelectorAll('th').length === 12);
 window.__setShowAll(false);
+
+// --- personal watchlist filter ---
+check('watchlist carries the flagged names', watchN === 2);
+check('watchlist toggle control present', !!$('scrWatch'));
+window.__setWatch(true);
+check('watchlist view shows only the watch names', $('scrBody').querySelectorAll('tr').length === watchN);
+check('watchlist rows are exactly the flagged tickers',
+  [...$('scrBody').querySelectorAll('tr')].every(tr => __WATCH.includes(tr.querySelector('td').textContent.trim())));
+window.__setWatch(false);
+check('public screener excludes watch names', $('scrBody').querySelectorAll('tr').length === pubN);
 
 // verdict bands all populated
 const bands = { Strong: 0, Solid: 0, Mixed: 0, Weak: 0 };

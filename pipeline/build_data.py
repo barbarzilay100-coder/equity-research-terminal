@@ -28,8 +28,14 @@ UNIVERSE = [
     "T","VZ","TMUS","CMCSA",
     # Israeli dual-listed (NASDAQ/NYSE + TASE)
     "TEVA","NICE","CHKP","WIX","MNDY","CYBR","ESLT",
+    # Personal watchlist -- small caps; tagged watch=True and hidden from the public views by default
+    "TE","ONDS","NBIS","LAES",
 ]
 UNIVERSE = list(dict.fromkeys(UNIVERSE))  # guard against accidental duplicates
+
+# Personal watchlist: these get the full analysis pipeline but are tagged watch=True so the
+# front end keeps them off the public overview / leaderboards / screener unless opted in.
+WATCHLIST = {"TE", "ONDS", "NBIS", "LAES"}
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repo root: data.json lives there, this script in pipeline/
 
@@ -119,6 +125,8 @@ def build(tk):
       "upside":round((ptavg-price)/price*100,1) if ptavg else None,
       "summary":(i.get("longBusinessSummary") or "").strip(),
     }
+    if tk in WATCHLIST:
+        d["watch"] = True
     return d
 
 def add_valuations(companies):

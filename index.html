@@ -248,6 +248,8 @@
 let DB=null, INDEX={}, revChart=null, pxChart=null;
 let SORT={key:'garp', dir:-1};
 let SHOWALL=false;
+let WATCH_ONLY=false;            // screener showing the personal watchlist instead of the public universe
+let PUB=[], WATCH=[];            // PUB = recruiter-facing universe, WATCH = personal watchlist
 const RENDERED={};
 
 function boot(){
@@ -255,11 +257,13 @@ function boot(){
     DB = window.DATA;
     if(!DB || !DB.companies) throw new Error('data.js not loaded');
     DB.companies.forEach(c=>{ INDEX[c.ticker]=c; c._sc=scoreOf(c); });
+    PUB   = DB.companies.filter(c=>!c.watch);   // public universe (recruiter-facing)
+    WATCH = DB.companies.filter(c=> c.watch);   // personal watchlist — kept off the public views
     const dl=document.getElementById('universe');
     dl.innerHTML = DB.companies.map(c=>`<option value="${c.ticker} — ${c.name}"></option>`).join('');
-    document.getElementById('footcount').textContent = DB.count;
+    document.getElementById('footcount').textContent = PUB.length;
     document.getElementById('footmeta').textContent = 'Data as of '+DB.generated;
-    setStatus('Ready — '+DB.count+' companies loaded. Explore the market, screen, compare, or search a name above.');
+    setStatus('Ready — '+PUB.length+' companies loaded. Explore the market, screen, compare, or search a name above.');
     showView('market');
   }catch(e){
     setStatus('Could not load market data ('+e.message+'). Make sure data.js sits next to index.html.',true);
@@ -741,7 +745,7 @@ function run(){
 /* ============================ MARKET OVERVIEW ============================ */
 function renderMarket(){
   const bySec={};
-  DB.companies.forEach(c=>{ (bySec[c.sector]=bySec[c.sector]||[]).push(c); });
+  PUB.forEach(c=>{ (bySec[c.sector]=bySec[c.sector]||[]).push(c); });
   const sectors=Object.keys(bySec).filter(s=>s&&s!=='—').map(s=>{  // unclassified is not a sector — keep it off the heatmap
     const arr=bySec[s];
     const avgRatio=arr.reduce((a,c)=>a+c._sc.ratio,0)/arr.length;
@@ -759,9 +763,9 @@ function renderMarket(){
     </div>`;
   }).join('');
 
-  const quality=[...DB.companies].sort((a,b)=> b._sc.ratio-a._sc.ratio || (b.marketCap||0)-(a.marketCap||0)).slice(0,5);
-  const undervalued=DB.companies.filter(c=>c._sc.ratio>=0.6 && c.upside!=null).sort((a,b)=>b.upside-a.upside).slice(0,5);
-  const onsale=DB.companies.filter(c=>c._sc.ratio>=0.6 && c.distHigh!=null).sort((a,b)=>a.distHigh-b.distHigh).slice(0,5);
+  const quality=[...PUB].sort((a,b)=> b._sc.ratio-a._sc.ratio || (b.marketCap||0)-(a.marketCap||0)).slice(0,5);
+  const undervalued=PUB.filter(c=>c._sc.ratio>=0.6 && c.upside!=null).sort((a,b)=>b.upside-a.upside).slice(0,5);
+  const onsale=PUB.filter(c=>c._sc.ratio>=0.6 && c.distHigh!=null).sort((a,b)=>a.distHigh-b.distHigh).slice(0,5);
 
   const qRow=c=>{ const v=shortVerdict(c._sc.ratio);
     return ovRow(c,`${c._sc.pass}/${c._sc.counted}<span class="miniv ${v.cls}">${v.t}</span>`); };
@@ -770,16 +774,16 @@ function renderMarket(){
   const chips=['AVGO','NVDA','COIN','V','NOW','JPM'].map(t=>`<span class="jchip" onclick="pick('${t}')">${t}</span>`).join('');
 
   // smart-money leaderboards: genuine open-market Form 4 buys / sells (grants & gifts excluded)
-  const omBuy = DB.companies.filter(c=>c.flow&&c.flow.om&&c.flow.om.buyN>0&&c.flow.om.buyVal>0)
+  const omBuy = PUB.filter(c=>c.flow&&c.flow.om&&c.flow.om.buyN>0&&c.flow.om.buyVal>0)
     .sort((a,b)=>b.flow.om.buyVal-a.flow.om.buyVal).slice(0,6);
-  const omSell = DB.companies.filter(c=>c.flow&&c.flow.om&&c.flow.om.sellN>0&&c.flow.om.sellVal>0)
+  const omSell = PUB.filter(c=>c.flow&&c.flow.om&&c.flow.om.sellN>0&&c.flow.om.sellVal>0)
     .sort((a,b)=>b.flow.om.sellVal-a.flow.om.sellVal).slice(0,6);
   const buyRow=c=>ovRow(c,`<span style="color:var(--green)">${fmtDollars(c.flow.om.buyVal)}</span><span class="miniv b-add">${c.flow.om.buyN} buy${c.flow.om.buyN>1?'s':''}</span>`,`openSmart('${c.ticker}')`);
   const sellRow=c=>ovRow(c,`<span style="color:var(--red)">${fmtDollars(c.flow.om.sellVal)}</span><span class="miniv b-trim">${c.flow.om.sellN} sell${c.flow.om.sellN>1?'s':''}</span>`,`openSmart('${c.ticker}')`);
 
   // deal radar: latest M&A completion / merger filing / activist or >5% stake per company (EDGAR)
   const dealCats={ma:1,merger:1,activist:1,stake:1};
-  const radar=DB.companies.map(c=>{ const evs=((c.events&&c.events.list)||[]).filter(e=>dealCats[e.c]);
+  const radar=PUB.map(c=>{ const evs=((c.events&&c.events.list)||[]).filter(e=>dealCats[e.c]);
       return evs.length?{c,latest:evs[0],n:evs.length}:null; })
     .filter(Boolean).sort((a,b)=>a.latest.d>b.latest.d?-1:a.latest.d<b.latest.d?1:0).slice(0,8);
   const radarRow=r=>{ const m=EV_META[r.latest.c];
@@ -787,7 +791,7 @@ function renderMarket(){
 
   $('view-market').innerHTML=`
     <div class="section">
-      <h2>Market Overview <span class="badge-src">${DB.count} companies · ${DB.generated}</span></h2>
+      <h2>Market Overview <span class="badge-src">${PUB.length} companies · ${DB.generated}</span></h2>
       <div class="jump"><span class="lbl">Jump to:</span>${chips}</div>
       <p class="ov-sub">Average GARP quality score by sector — greener is higher quality. Click any sector to screen its names.</p>
       <div class="heatgrid">${heat}</div>
@@ -822,10 +826,12 @@ function ovRow(c,metricHTML,action){
 }
 function gotoScreenerSector(sec){
   showView('screener');
+  WATCH_ONLY=false; { const w=$('scrWatch'); if(w) w.checked=false; }
   const sel=$('scrSector'); if(sel){ sel.value=sec; paintScreener(); }
 }
 function gotoScreenerSort(key,dir,minR){
   showView('screener');
+  WATCH_ONLY=false; { const w=$('scrWatch'); if(w) w.checked=false; }
   SORT.key=key; SORT.dir=dir;
   const m=$('scrMin'); if(m&&minR!=null) m.value=String(minR);
   paintHead(); paintScreener();
@@ -852,7 +858,7 @@ function renderScreener(){
   const sectors=[...new Set(DB.companies.map(c=>c.sector))].sort();
   $('view-screener').innerHTML=`
     <div class="section">
-      <h2>Screener &amp; Leaderboard <span class="badge-src">${DB.count} companies</span></h2>
+      <h2>Screener &amp; Leaderboard <span class="badge-src">${PUB.length} companies</span></h2>
       <div class="filterbar">
         <input id="scrSearch" type="text" placeholder="Filter by ticker or name…" oninput="paintScreener()">
         <select id="scrSector" onchange="paintScreener()"><option value="">All sectors</option>${sectors.map(s=>`<option>${s}</option>`).join('')}</select>
@@ -862,6 +868,7 @@ function renderScreener(){
           <option value="0.6">Solid &amp; up</option>
           <option value="0.4">Mixed &amp; up</option>
         </select>
+        ${WATCH.length?`<label class="coltoggle"><input type="checkbox" id="scrWatch" onchange="WATCH_ONLY=this.checked;paintScreener()"> ★ My Watchlist</label>`:``}
         <label class="coltoggle"><input type="checkbox" id="scrAll" onchange="SHOWALL=this.checked;paintHead();paintScreener()"> All columns</label>
         <button class="csvbtn" onclick="exportCSV()">Export CSV</button>
         <span id="scrCount" class="scrcount"></span>
@@ -887,7 +894,7 @@ function screenerRows(){
   const q=($('scrSearch').value||'').trim().toUpperCase();
   const sec=$('scrSector').value;
   const minR=parseFloat($('scrMin').value||'0');
-  const rows=DB.companies.filter(c=>{
+  const rows=(WATCH_ONLY?WATCH:PUB).filter(c=>{
     if(sec && c.sector!==sec) return false;
     if(c._sc.ratio<minR) return false;
     if(q && !(c.ticker.toUpperCase().includes(q)||c.name.toUpperCase().includes(q))) return false;
@@ -915,7 +922,7 @@ function exportCSV(){
 }
 function paintScreener(){
   const rows=screenerRows();
-  $('scrCount').textContent=rows.length+' of '+DB.count+' companies';
+  $('scrCount').textContent=rows.length+' of '+(WATCH_ONLY?WATCH:PUB).length+(WATCH_ONLY?' watchlist names':' companies');
   const cols=activeCols();
   $('scrBody').innerHTML=rows.map(c=>{
     const v=shortVerdict(c._sc.ratio);
