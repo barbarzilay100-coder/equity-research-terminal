@@ -69,14 +69,21 @@ check('all-columns toggle widens table', $('scrHead').querySelectorAll('th').len
 window.__setShowAll(false);
 
 // --- personal watchlist filter ---
-check('watchlist carries the flagged names', watchN === 2);
+const watchSet = new Set(DB.companies.filter(c=>c.watch).map(c=>c.ticker));  // real watchlist names + the two injected above
+check('watchlist carries the injected names', __WATCH.every(t => watchSet.has(t)));
+check('PUB and WATCH partition the universe', pubN + watchN === DB.companies.length);
 check('watchlist toggle control present', !!$('scrWatch'));
 window.__setWatch(true);
-check('watchlist view shows only the watch names', $('scrBody').querySelectorAll('tr').length === watchN);
-check('watchlist rows are exactly the flagged tickers',
-  [...$('scrBody').querySelectorAll('tr')].every(tr => __WATCH.includes(tr.querySelector('td').textContent.trim())));
+const wRows = [...$('scrBody').querySelectorAll('tr')];
+check('watchlist view shows exactly the flagged names', wRows.length === watchN);
+check('every watchlist row is a flagged name',
+  wRows.every(tr => watchSet.has(tr.querySelector('td').textContent.trim())));
+check('injected names show up in the watchlist',
+  __WATCH.every(t => wRows.some(tr => tr.querySelector('td').textContent.trim() === t)));
 window.__setWatch(false);
-check('public screener excludes watch names', $('scrBody').querySelectorAll('tr').length === pubN);
+const pRows = [...$('scrBody').querySelectorAll('tr')];
+check('public screener excludes every watch name',
+  pRows.length === pubN && pRows.every(tr => !watchSet.has(tr.querySelector('td').textContent.trim())));
 
 // verdict bands all populated
 const bands = { Strong: 0, Solid: 0, Mixed: 0, Weak: 0 };
