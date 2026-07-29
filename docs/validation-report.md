@@ -1,7 +1,7 @@
 # Data validation report
 
-Generated 2026-07-28 08:42 UTC · snapshot **Jul 28, 2026** · 126 companies
-Result: **PASS** — 0 hard failure(s), 23 warning(s)
+Generated 2026-07-29 08:48 UTC · snapshot **Jul 29, 2026** · 126 companies
+Result: **PASS** — 0 hard failure(s), 21 warning(s)
 
 ## Warnings (source-data oddities, non-blocking)
 
@@ -10,17 +10,15 @@ Result: **PASS** — 0 hard failure(s), 23 warning(s)
 - MU: fcfMargin 8.46% vs 20.4% from fcf/FY-revenue
 - SNPS: fcfMargin 40.77% vs 50.2% from fcf/FY-revenue
 - CRWD: implied upside -89.0% outlier — check source multiples
-- DDOG: implied upside -85.0% outlier — check source multiples
-- NET: implied upside -87.0% outlier — check source multiples
+- DDOG: implied upside -84.7% outlier — check source multiples
+- NET: implied upside -86.7% outlier — check source multiples
 - SMCI: fcfMargin -22.1% vs -33.9% from fcf/FY-revenue
 - GPN: netMargin -7.97% vs 8.2% from netIncome/FY-revenue
 - GPN: fcfMargin 80.45% vs 92.4% from fcf/FY-revenue
-- GPN: implied upside 427.4% outlier — check source multiples
 - NU: netMargin 41.92% vs 30.0% from netIncome/FY-revenue
-- TSLA: implied upside -83.6% outlier — check source multiples
-- MRK: PEG 12.1361 out of [0, 10]
-- BA: PEG 26.231 out of [0, 10]
-- CMCSA: PEG 142.9829 out of [0, 10]
+- TSLA: implied upside -83.4% outlier — check source multiples
+- MRK: PEG 12.1074 out of [0, 10]
+- BA: PEG 26.4789 out of [0, 10]
 - ONDS: netMargin 251.92% vs 268.0% from netIncome/FY-revenue
 - ONDS: fcfMargin -16.56% vs -32.0% from fcf/FY-revenue
 - ONDS: netMargin 251.92% out of [-100, 100]
