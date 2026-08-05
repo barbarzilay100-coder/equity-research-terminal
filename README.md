@@ -2,7 +2,7 @@
 
 Built by **Bar Barzilay** — [LinkedIn](https://www.linkedin.com/in/bar-barzilay-ba932235b) · [GitHub](https://github.com/barbarzilay100-coder) · [barbarzilay100@gmail.com](mailto:barbarzilay100@gmail.com)
 
-A live, single-page **equity research terminal** covering ~125 major US companies and Israeli dual-listed names (TEVA, NICE, CHKP, WIX, MNDY, CYBR, ESLT). It has four modes:
+A live, single-page **equity research terminal** covering the US large-cap universe defined in `pipeline/build_data.py` — mega-cap tech, financials, healthcare, consumer, industrials and Israeli dual-listed names (TEVA, NICE, CHKP, WIX, MNDY, CYBR, ESLT). The live coverage count is shown in the site footer. Four modes, plus a Deal Radar board:
 
 - **Market Overview** — a GARP-quality heatmap by sector plus leaderboards (Highest Quality, Highest Analyst Upside, Quality on Sale).
 - **Screener & Leaderboard** — sort and filter the whole universe by any metric or GARP score.
