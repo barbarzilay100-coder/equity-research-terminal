@@ -7,7 +7,14 @@ via the free SEC XBRL Company Facts API:
 
   https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json
 
-  revenue, netIncome, fcf (operating cash flow - capex), equity, debt
+  revenue, netIncome, fcf (operating cash flow - capex), equity
+
+Total debt is deliberately absent. Filers split borrowings across tags that do
+not compose the same way twice -- Super Micro's combined-debt tag holds 0.11B
+while 4.65B of convertible notes sit under a tag of their own, and Elbit exposes
+no entity-level debt tag at all -- so any single rule either understates some
+companies or double counts others. An absent row is honest; a plausible wrong
+number in a table whose purpose is accuracy is not.
 
 Yahoo (build_data.py) is a summarised, mostly-TTM view; this block is what the
 company actually filed, for one fiscal year, with the accession number kept so
@@ -97,29 +104,6 @@ INSTANT_TAGS = {
         ("us-gaap", "StockholdersEquity"),
         ("us-gaap", "StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest"),
         ("ifrs-full", "Equity"),
-    ],
-    # Debt is the one row that cannot be read off a single tag. Two shapes exist:
-    # a tag that already carries the whole long-term balance including current
-    # maturities, or a non-current balance that needs its current portion added.
-    # They are kept apart so the current portion is never added twice.
-    "debtTotalLong": [       # already includes current maturities
-        ("us-gaap", "DebtLongtermAndShorttermCombinedAmount"),
-        ("us-gaap", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities"),
-        ("us-gaap", "LongTermDebt"),
-    ],
-    "debtNoncurrent": [      # needs the current portion added
-        ("us-gaap", "LongTermDebtNoncurrent"),
-        ("us-gaap", "LongTermDebtAndCapitalLeaseObligationsNoncurrent"),
-        ("ifrs-full", "NoncurrentPortionOfNoncurrentBorrowings"),
-    ],
-    "debtCurrent": [
-        ("us-gaap", "LongTermDebtCurrent"),
-        ("us-gaap", "DebtCurrent"),
-        ("ifrs-full", "CurrentPortionOfNoncurrentBorrowings"),
-    ],
-    "debtShortTerm": [       # commercial paper and other short-term borrowings
-        ("us-gaap", "ShortTermBorrowings"),
-        ("us-gaap", "OtherShortTermBorrowings"),
     ],
 }
 
@@ -256,28 +240,6 @@ def extract(facts, cik):
         out["equity"] = to_b(eq["val"])
         out["tags"]["equity"] = eq_tag[1]
 
-    # Borrowings only: a long-term component must be found, because the current
-    # portion on its own is a fraction of the balance and would read as a real
-    # number while being wrong. Filers who tag total debt only per instrument
-    # (dimensional facts, which this API omits) therefore get no debt row at all
-    # -- an empty cell is honest, a partial sum is not.
-    parts, tags = [], []
-    tot, tot_tag = instant_fact(facts, INSTANT_TAGS["debtTotalLong"], end, accn)
-    if tot:
-        parts.append(tot["val"]); tags.append(tot_tag[1])
-    else:
-        nc, nc_tag = instant_fact(facts, INSTANT_TAGS["debtNoncurrent"], end, accn)
-        if nc:
-            parts.append(nc["val"]); tags.append(nc_tag[1])
-            cur, cur_tag = instant_fact(facts, INSTANT_TAGS["debtCurrent"], end, accn)
-            if cur:
-                parts.append(cur["val"]); tags.append(cur_tag[1])
-    if parts:
-        st, st_tag = instant_fact(facts, INSTANT_TAGS["debtShortTerm"], end, accn)
-        if st:
-            parts.append(st["val"]); tags.append(st_tag[1])
-        out["debt"] = to_b(sum(parts))
-        out["tags"]["debt"] = "+".join(tags)
     return out
 
 

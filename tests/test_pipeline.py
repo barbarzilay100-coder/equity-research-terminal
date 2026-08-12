@@ -250,25 +250,6 @@ def test_extract_keeps_every_figure_inside_one_filing():
     assert blk["accn"] == "new" and blk["equity"] == 5.0
 
 
-def test_extract_omits_debt_when_only_the_current_portion_is_tagged():
-    """Filers who tag debt per instrument expose only the current slice at entity
-    level; summing it alone understates total debt, so no row is emitted."""
-    facts = facts_of(
-        ("Revenues", 17e9, "2025-01-01", "2025-12-31", "20-F", "2026-02-01", "x"),
-        ("LongTermDebtCurrent", 1.8e9, None, "2025-12-31", "20-F", "2026-02-01", "x"),
-    )
-    assert "debt" not in build_sec.extract(facts, 1234)
-
-
-def test_extract_adds_the_current_portion_to_a_noncurrent_balance():
-    facts = facts_of(
-        ("Revenues", 275e9, "2025-01-01", "2025-12-31", "10-K", "2026-02-01", "x"),
-        ("LongTermDebtNoncurrent", 5.0e9, None, "2025-12-31", "10-K", "2026-02-01", "x"),
-        ("LongTermDebtCurrent", 0.8e9, None, "2025-12-31", "10-K", "2026-02-01", "x"),
-    )
-    assert build_sec.extract(facts, 1234)["debt"] == 5.8
-
-
 def test_extract_computes_fcf_only_with_both_legs():
     base = [("Revenues", 10e9, "2025-01-01", "2025-12-31", "10-K", "2026-02-01", "x"),
             ("NetCashProvidedByUsedInOperatingActivities", 3e9, "2025-01-01", "2025-12-31",

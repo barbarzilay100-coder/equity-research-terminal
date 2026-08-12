@@ -538,7 +538,6 @@ function reconciliationHTML(d){
     ['Net income',           s.netIncome, d.netIncome],
     ['Free cash flow',       s.fcf,       d.fcf],
     ["Shareholders' equity", s.equity,    d.equity],
-    ['Total debt',           s.debt,      d.debt],
   ];
   const body=rows.map(([label,filed,vendor])=>{
     const gap=(filed!=null&&vendor!=null&&filed!==0)?(vendor-filed)/Math.abs(filed)*100:null;
@@ -547,7 +546,7 @@ function reconciliationHTML(d){
     const tag=label==='Free cash flow'
       ? (T.ocf&&T.capex?T.ocf+' − '+T.capex:null)
       : T[{'Revenue':'revenue','Net income':'netIncome',
-           "Shareholders' equity":'equity','Total debt':'debt'}[label]];
+           "Shareholders' equity":'equity'}[label]];
     return `<tr><td>${label}</td>
       <td${tag?` title="XBRL tag: ${tag}"`:''}>${fmtB(filed)}</td>
       <td>${fmtB(vendor)}</td>
@@ -564,8 +563,10 @@ function reconciliationHTML(d){
     <p class="foot">Filed figures come from the SEC XBRL Company Facts API, all five drawn from a single
     filing (accession ${s.accn||'—'}); hover a filed number for the exact XBRL tag. Yahoo's figures are
     largely trailing-twelve-month and refresh daily, so a gap against a fiscal-year filing is expected —
-    this table sizes it. An empty cell means the filer tags that line only per instrument, where a
-    partial sum would read as a total.</p>
+    this table sizes it. An empty cell means the filing does not expose that line at entity
+    level — most often free cash flow at a bank, which reports no separate capital expenditure.
+    Total debt is left out entirely: filers split borrowings across tags that do not compose the
+    same way twice, so no single rule reproduces it without understating or double counting.</p>
   </div>`;
 }
 function valuationHTML(d){
