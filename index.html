@@ -525,49 +525,7 @@ function financialsHTML(d,sc){
       <div class="kpi"><div class="l">Rule of 40</div><div class="v">${sc.ruleOf40!=null?sc.ruleOf40.toFixed(0):'—'}</div></div>
     </div>
   </div>
-  ${reconciliationHTML(d)}`;
-}
-// Vendor figures against the company's own filing. Yahoo is a summarised, mostly
-// trailing-twelve-month view refreshed daily; the SEC column is one fiscal year
-// exactly as filed, every row from the same accession number. A difference is
-// therefore expected -- the table sizes it instead of leaving it invisible.
-function reconciliationHTML(d){
-  const s=d.sec; if(!s) return '';
-  const rows=[
-    ['Revenue',              s.revenue,   d.revenue],
-    ['Net income',           s.netIncome, d.netIncome],
-    ['Free cash flow',       s.fcf,       d.fcf],
-    ["Shareholders' equity", s.equity,    d.equity],
-  ];
-  const body=rows.map(([label,filed,vendor])=>{
-    const gap=(filed!=null&&vendor!=null&&filed!==0)?(vendor-filed)/Math.abs(filed)*100:null;
-    const T=s.tags||{};
-    // FCF is derived, so its provenance is the two tags it was computed from
-    const tag=label==='Free cash flow'
-      ? (T.ocf&&T.capex?T.ocf+' − '+T.capex:null)
-      : T[{'Revenue':'revenue','Net income':'netIncome',
-           "Shareholders' equity":'equity'}[label]];
-    return `<tr><td>${label}</td>
-      <td${tag?` title="XBRL tag: ${tag}"`:''}>${fmtB(filed)}</td>
-      <td>${fmtB(vendor)}</td>
-      <td>${gap==null?'—':pct(gap)}</td></tr>`;
-  }).join('');
-  const src=s.url?`<a href="${s.url}" target="_blank" rel="noopener">${s.form} · ${s.fy}</a>`:`${s.form} · ${s.fy}`;
-  return `
-  <div class="section">
-    <h2>As Reported vs. Vendor Data</h2>
-    <table>
-      <thead><tr><th>Line item</th><th>As reported — ${src}</th><th>Yahoo Finance</th><th>Difference</th></tr></thead>
-      <tbody>${body}</tbody>
-    </table>
-    <p class="foot">Filed figures come from the SEC XBRL Company Facts API, all five drawn from a single
-    filing (accession ${s.accn||'—'}); hover a filed number for the exact XBRL tag. Yahoo's figures are
-    largely trailing-twelve-month and refresh daily, so a gap against a fiscal-year filing is expected —
-    this table sizes it. An empty cell means the filing does not expose that line at entity
-    level — most often free cash flow at a bank, which reports no separate capital expenditure.
-    Total debt is left out entirely: filers split borrowings across tags that do not compose the
-    same way twice, so no single rule reproduces it without understating or double counting.</p>
-  </div>`;
+  `;
 }
 function valuationHTML(d){
   return `

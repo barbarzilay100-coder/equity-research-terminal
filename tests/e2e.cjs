@@ -122,19 +122,6 @@ check('filings table lists classified filings', $('rt-filings').querySelectorAll
 check('filing rows link to sec.gov',
   (($('rt-filings').querySelector('tbody a') || {}).href || '').startsWith('https://www.sec.gov/Archives/edgar/data/'));
 
-// as-reported reconciliation (only once build_sec has run; a fresh clone has no `sec` yet)
-const secCo = DB.companies.find(c => c.sec && c.sec.revenue != null);
-if (secCo) {
-  window.openResearch(secCo.ticker);
-  window.reportTab('financials');
-  const fin = $('rt-financials').innerHTML;
-  check('reconciliation table rendered', fin.includes('As Reported vs. Vendor Data'));
-  check('reconciliation links to the filing on sec.gov',
-    fin.includes('https://www.sec.gov/Archives/edgar/data/'));
-  const secCov = DB.companies.filter(c => c.sec && c.sec.revenue != null).length;
-  check('as-reported figures cover 100+ companies', secCov >= 100);
-}
-
 // search box path
 $('ticker').value = 'Coinbase';
 window.run();
