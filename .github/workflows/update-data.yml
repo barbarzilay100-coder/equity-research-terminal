@@ -43,11 +43,6 @@ jobs:
         run: |
           python pipeline/build_events.py fetch 0 200   # 8-K items, S-4/425, 13D/G via EDGAR
           python pipeline/build_events.py merge         # fold events into data.json / data.js
-      - name: Enrich with as-reported figures (SEC XBRL)
-        if: github.event_name != 'push'
-        run: |
-          python pipeline/build_sec.py fetch 0 200     # annual filed figures via companyfacts
-          python pipeline/build_sec.py merge           # fold sec into data.json / data.js
       - name: Write SQLite snapshot
         if: github.event_name != 'push'
         run: python pipeline/build_db.py       # data.json -> terminal.db

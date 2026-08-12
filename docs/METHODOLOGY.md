@@ -53,42 +53,6 @@ Caveats: sector is a coarse peer group (a payments network and a regional bank a
 forward P/E route usually exists (EV/EBITDA is undefined for banks); and a one-day multiple
 snapshot is not a fairness opinion — this is a screening signal, not a price target.
 
-## As-reported figures (SEC XBRL)
-
-Every company also carries the four figures the scorecard is built on exactly as the
-company filed them, pulled by `pipeline/build_sec.py` from the free SEC XBRL Company
-Facts API (`data.sec.gov/api/xbrl/companyfacts/`): revenue, net income, free cash flow
-(operating cash flow less capital expenditure) and shareholders' equity, for the latest
-annual filing (10-K, 20-F or 40-F). The Financials tab shows them beside the Yahoo
-figures with the difference, the accession number, and the XBRL tag behind each number.
-
-Yahoo's figures are largely trailing-twelve-month and refresh daily; the filed column is
-one fiscal year, fixed. A difference between them is therefore expected — the table
-sizes it rather than resolving it.
-
-Three rules keep the extraction defensible:
-
-1. **One filing.** The fiscal year is chosen from the revenue fact, and every other
-   figure prefers a fact carrying the same accession number, so the rows are internally
-   consistent rather than assembled from several filings.
-2. **Duration, not labels.** An annual figure must span 350–380 days. A filer tagging a
-   single quarter as `fp: FY` is common enough that the label alone cannot be trusted.
-3. **Latest period, then tag priority.** Companies migrate between tags and leave the
-   abandoned one populated with real but stale values, so the newest period always wins
-   before tag preference; within a period, the newest filing date wins, which is how a
-   restatement supersedes the original.
-
-Known limits, by construction: free cash flow is absent for banks and brokers, which
-report no separate capital expenditure line (~90% of the universe has it); **total debt
-is not extracted at all** — filers split borrowings across tags that do not compose the
-same way twice (one filer's combined-debt tag excludes convertible notes carried under a
-tag of their own; another exposes no entity-level debt tag), so no single rule reproduces
-it without understating some companies or double counting others; only facts without
-dimensions are published by this API, so a line tagged solely per instrument or per
-segment is invisible; and a company whose ticker has moved to a successor entity (a
-holding-company reorganisation) has no annual filing under its new CIK until the first
-one is filed, so it carries no as-reported block.
-
 ## SEC filings classification (Deal Radar)
 
 The `events` block is built from the free SEC EDGAR submissions API
@@ -117,11 +81,9 @@ set in `pipeline/build_events.py`.
 
 ## Data limitations
 
-- **Single vendor.** All fundamentals come from Yahoo Finance via `yfinance`, and Yahoo's
-  field definitions (e.g. what lands in `totalDebt`) are not always documented. The four
-  statement lines above are cross-checked against the company's own filing (see
-  *As-reported figures*), but everything else — prices, multiples, analyst targets, PEG —
-  exists only in the vendor's version. To contain this, every refresh runs
+- **Single source.** All fundamentals come from Yahoo Finance via `yfinance`. There is no
+  second vendor to reconcile against, and Yahoo's field definitions (e.g. what lands in
+  `totalDebt`) are not always documented. To contain this, every refresh runs
   `pipeline/validate_data.py`: derived fields are recomputed from their inputs (hard failures block
   the commit) and source-data oddities are reported in `docs/validation-report.md` — but a
   wrong-but-internally-consistent Yahoo number still flows through.

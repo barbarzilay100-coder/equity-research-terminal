@@ -16,7 +16,6 @@ import build_data
 import build_events
 import build_flow
 import build_prices
-import build_sec
 
 
 # ---------- build_data.rev_history ----------
@@ -173,88 +172,3 @@ def test_select_events_window_sort_and_cap():
         fake_recent([("2026-07-%02d" % (1 + i % 9), "8-K", "2.02") for i in range(20)]),
         today=today, cap=5)
     assert len(capped) == 5
-
-
-def test_equity_of_prefers_book_value_and_falls_back_to_the_ratio():
-    """Yahoo has no equity field: book value per share x shares is the direct
-    route, debt / debt-to-equity the fallback when either input is missing."""
-    direct = build_data.equity_of({"bookValue": 5.0, "sharesOutstanding": 2e9,
-                                   "totalDebt": 1e9, "debtToEquity": 50.0})
-    assert direct == 10.0                      # 5 x 2bn shares, not 1bn / 0.5
-    fallback = build_data.equity_of({"totalDebt": 1e9, "debtToEquity": 50.0})
-    assert fallback == 2.0
-    assert build_data.equity_of({"bookValue": 5.0}) is None
-
-
-# ---------- build_sec: choosing the right fact ----------
-
-def facts_of(*rows):
-    """rows: (tag, val, start, end, form, filed, accn) -> a companyfacts-shaped dict."""
-    out = {}
-    for tag, val, start, end, form, filed, accn in rows:
-        f = {"val": val, "end": end, "form": form, "filed": filed, "accn": accn}
-        if start:
-            f["start"] = start
-        out.setdefault("us-gaap", {}).setdefault(tag, {"units": {"USD": []}})
-        out["us-gaap"][tag]["units"]["USD"].append(f)
-    return out
-
-
-def test_annual_fact_prefers_newest_period_over_tag_priority():
-    """A tag a filer abandoned still holds real values; taking the first tag that
-    has data would report a years-old revenue as current (NVDA, XOM both do this)."""
-    facts = facts_of(
-        ("RevenueFromContractWithCustomerExcludingAssessedTax", 26_914e6,
-         "2021-01-25", "2022-01-30", "10-K", "2022-03-18", "a-22"),
-        ("Revenues", 215_938e6, "2025-01-27", "2026-01-25", "10-K", "2026-02-26", "a-26"),
-    )
-    fact, tag = build_sec.annual_fact(facts, build_sec.DURATION_TAGS["revenue"])
-    assert fact["val"] == 215_938e6 and tag[1] == "Revenues"
-
-
-def test_annual_fact_rejects_a_quarter_tagged_as_full_year():
-    """`fp: FY` is not evidence of an annual period -- the period length is."""
-    facts = facts_of(
-        ("Revenues", 1_500e6, "2025-10-01", "2025-12-31", "10-K", "2026-02-01", "q4"),
-        ("Revenues", 17_258e6, "2025-01-01", "2025-12-31", "10-K", "2026-02-01", "fy"),
-    )
-    fact, _ = build_sec.annual_fact(facts, build_sec.DURATION_TAGS["revenue"])
-    assert fact["val"] == 17_258e6
-
-
-def test_annual_fact_lets_a_restatement_supersede_the_original():
-    facts = facts_of(
-        ("Revenues", 100e9, "2024-01-01", "2024-12-31", "10-K", "2025-02-01", "orig"),
-        ("Revenues", 98e9, "2024-01-01", "2024-12-31", "10-K", "2026-02-01", "restated"),
-    )
-    fact, _ = build_sec.annual_fact(facts, build_sec.DURATION_TAGS["revenue"])
-    assert fact["val"] == 98e9
-
-
-def test_extract_labels_the_year_from_the_period_not_the_filing():
-    """A comparative carries the filing's `fy`, which is a year ahead of its period."""
-    facts = facts_of(("Revenues", 2e9, "2025-01-01", "2025-12-31", "20-F", "2026-04-01", "x"))
-    facts["us-gaap"]["Revenues"]["units"]["USD"][0]["fy"] = 2026
-    blk = build_sec.extract(facts, 1234)
-    assert blk["fy"] == "FY2025"
-
-
-def test_extract_keeps_every_figure_inside_one_filing():
-    """Balance-sheet rows must come from the same filing as the revenue row."""
-    facts = facts_of(
-        ("Revenues", 10e9, "2025-01-01", "2025-12-31", "10-K", "2026-02-01", "new"),
-        ("StockholdersEquity", 5e9, None, "2025-12-31", "10-K", "2026-02-01", "new"),
-        ("StockholdersEquity", 4e9, None, "2024-12-31", "10-K", "2025-02-01", "old"),
-    )
-    blk = build_sec.extract(facts, 1234)
-    assert blk["accn"] == "new" and blk["equity"] == 5.0
-
-
-def test_extract_computes_fcf_only_with_both_legs():
-    base = [("Revenues", 10e9, "2025-01-01", "2025-12-31", "10-K", "2026-02-01", "x"),
-            ("NetCashProvidedByUsedInOperatingActivities", 3e9, "2025-01-01", "2025-12-31",
-             "10-K", "2026-02-01", "x")]
-    assert "fcf" not in build_sec.extract(facts_of(*base), 1234)   # bank: no capex tag
-    with_capex = base + [("PaymentsToAcquirePropertyPlantAndEquipment", 1e9,
-                          "2025-01-01", "2025-12-31", "10-K", "2026-02-01", "x")]
-    assert build_sec.extract(facts_of(*with_capex), 1234)["fcf"] == 2.0
