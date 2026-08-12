@@ -175,6 +175,17 @@ def test_select_events_window_sort_and_cap():
     assert len(capped) == 5
 
 
+def test_equity_of_prefers_book_value_and_falls_back_to_the_ratio():
+    """Yahoo has no equity field: book value per share x shares is the direct
+    route, debt / debt-to-equity the fallback when either input is missing."""
+    direct = build_data.equity_of({"bookValue": 5.0, "sharesOutstanding": 2e9,
+                                   "totalDebt": 1e9, "debtToEquity": 50.0})
+    assert direct == 10.0                      # 5 x 2bn shares, not 1bn / 0.5
+    fallback = build_data.equity_of({"totalDebt": 1e9, "debtToEquity": 50.0})
+    assert fallback == 2.0
+    assert build_data.equity_of({"bookValue": 5.0}) is None
+
+
 # ---------- build_sec: choosing the right fact ----------
 
 def facts_of(*rows):

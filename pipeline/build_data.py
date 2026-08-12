@@ -54,6 +54,20 @@ def pct(v):
     v=num(v)
     return round(v*100,2) if v is not None else None
 
+def equity_of(i):
+    """Total shareholders' equity, which Yahoo does not expose as a field.
+    Book value per share x shares outstanding is the direct route; dividing debt
+    by the debt-to-equity ratio is the fallback for names missing either input,
+    and inherits that ratio's rounding, so it is only a second choice."""
+    bv, sh = num(i.get("bookValue")), num(i.get("sharesOutstanding"))
+    if bv is not None and sh:
+        return to_b(bv * sh)
+    d, de = num(i.get("totalDebt")), num(i.get("debtToEquity"))
+    if d is not None and de:
+        return to_b(d / (de / 100))
+    return None
+
+
 RATING={"strong_buy":"Strong Buy","buy":"Buy","hold":"Hold","underperform":"Underperform","sell":"Sell","none":None}
 
 def rev_history(t):
@@ -103,12 +117,14 @@ def build(tk):
       "grossMargin":pct(i.get("grossMargins")),
       "ebitdaMargin":pct(i.get("ebitdaMargins")),
       "eps":num(i.get("trailingEps")),
+      "revenue":to_b(rev),
       "netIncome":to_b(i.get("netIncomeToCommon")),
       "fcf":fcf,
       "fcfMargin":round(fcf*1e9/rev*100,2) if (fcf is not None and rev) else None,
       "cash":to_b(i.get("totalCash")),
       "debt":to_b(i.get("totalDebt")),
       "debtEquity":round(de/100,2) if de is not None else None,
+      "equity":equity_of(i),
       "currentRatio":num(i.get("currentRatio")),
       "roe":pct(i.get("returnOnEquity")),
       "pe":num(i.get("trailingPE")),
