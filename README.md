@@ -8,7 +8,9 @@ A live, single-page **equity research terminal** covering the US large-cap unive
 - **Screener & Leaderboard** — sort and filter the whole universe by any metric or GARP score.
 - **Compare** — put 2–3 companies side by side, best value per row highlighted.
 - **Research** — type any company or ticker for a full report, organized into sub-tabs: a graded GARP
-  scorecard + investment memo, financials, valuation & analyst targets — including a sector-relative
+  scorecard + investment memo, financials — including an **as-reported reconciliation**, each
+  figure set beside the same line as filed with the SEC and linked to the filing — valuation
+  & analyst targets, including a sector-relative
   implied value computed in the pipeline from peer-median EV/EBITDA and forward P/E — a technicals tab (50/200-day
   moving averages + RSI signals), a **Smart Money** tab (institutional ownership, 13F position
   changes, and insider buying/selling), and a **Filings** tab — six months of SEC filings per company,
@@ -29,6 +31,7 @@ A live, single-page **equity research terminal** covering the US large-cap unive
 |---|---|
 | `pipeline/build_data.py` / `pipeline/build_prices.py` / `pipeline/build_flow.py` — yfinance data pipelines | Python, data acquisition & cleaning |
 | `pipeline/build_events.py` — SEC EDGAR filings pipeline; Deal Radar built from 8-K item codes, S-4/425, 13D/G | M&A awareness, working with primary sources |
+| `pipeline/build_sec.py` — as-filed figures from the SEC XBRL Company Facts API, shown against the vendor's | Reconciliation against a primary source |
 | Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis |
 | Sector-relative implied valuation — peer-median EV/EBITDA & forward P/E repricing | Relative valuation (comps) |
 | CI-gated e2e test + [data validation](docs/validation-report.md) — reconciliation & bounds checks gate every refresh | Accuracy, reconciliation & attention to detail |
@@ -50,9 +53,13 @@ The app is fully static (hosts on GitHub Pages), yet always current, thanks to a
    every recent filing classified deterministically by form type and 8-K item code (M&A completions,
    merger filings, activist stakes, leadership changes, results), powering the Deal Radar board and
    the per-company Filings tab.
-5. **GitHub Actions** (`.github/workflows/update-data.yml`) — runs all four pipelines automatically every
+5. **`pipeline/build_sec.py`** — adds a `sec` block of as-reported figures: revenue, net income,
+   free cash flow and shareholders' equity for the latest annual filing, taken from the **SEC XBRL
+   Company Facts** API with the accession number and the XBRL tag behind every number, so the
+   Financials tab can set the vendor's figures against the company's own.
+6. **GitHub Actions** (`.github/workflows/update-data.yml`) — runs all five pipelines automatically every
    weekday morning and commits the refreshed `data.json`/`data.js`, so the site never goes stale.
-6. **`index.html`** — a zero-dependency front end that loads `data.js` and renders every view,
+7. **`index.html`** — a zero-dependency front end that loads `data.js` and renders every view,
    including a deterministic **GARP scorecard** (pass/fail against defined thresholds).
 
 Because the numbers are pre-computed and committed, the site loads instantly, works offline, exposes
@@ -115,6 +122,8 @@ python pipeline/build_prices.py fetch 0 200   # price history + technicals for t
 python pipeline/build_prices.py merge         # fold tech into data.js / data.json
 python pipeline/build_flow.py fetch 0 200     # smart money: ownership + insider flow
 python pipeline/build_flow.py merge           # fold flow into data.js / data.json
+python pipeline/build_sec.py fetch 0 200      # as-reported figures from SEC XBRL
+python pipeline/build_sec.py merge           # fold sec into data.js / data.json
 python pipeline/build_db.py                   # data.json -> terminal.db
 python pipeline/validate_data.py              # reconciliation + bounds report
 ```
