@@ -8,6 +8,11 @@ venv/
 .DS_Store
 *.swp
 
+# Node (local test deps only — CI installs jsdom with --no-save)
+node_modules/
+package.json
+package-lock.json
+
 # Local scratch
 /tmp/
 *.db-journal
