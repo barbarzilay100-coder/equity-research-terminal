@@ -1,6 +1,6 @@
 # Data validation report
 
-Generated 2026-09-07 12:01 UTC · snapshot **Sep 07, 2026** · 126 companies
+Generated 2026-09-08 10:57 UTC · snapshot **Sep 08, 2026** · 126 companies
 Result: **PASS** — 0 hard failure(s), 25 warning(s)
 
 ## Warnings (source-data oddities, non-blocking)
@@ -19,7 +19,7 @@ Result: **PASS** — 0 hard failure(s), 25 warning(s)
 - DDOG: implied upside -80.3% outlier — check source multiples
 - NET: implied upside -86.6% outlier — check source multiples
 - ZS: fcfMargin 32.07% vs 40.3% from fcf/FY-revenue
-- FIS: implied upside 312.4% outlier — check source multiples
+- FIS: implied upside 311.8% outlier — check source multiples
 - GPN: netMargin -9.15% vs 6.4% from netIncome/FY-revenue
 - GPN: fcfMargin 77.09% vs 102.0% from fcf/FY-revenue
 - NU: netMargin 42.73% vs 33.9% from netIncome/FY-revenue
@@ -27,6 +27,6 @@ Result: **PASS** — 0 hard failure(s), 25 warning(s)
 - ONDS: netMargin 96.25% vs 172.0% from netIncome/FY-revenue
 - ONDS: fcfMargin -39.63% vs -138.0% from fcf/FY-revenue
 - NBIS: fcfMargin -709.54% vs -1814.2% from fcf/FY-revenue
-- NBIS: implied upside -99.3% outlier — check source multiples
+- NBIS: implied upside -99.2% outlier — check source multiples
 - LAES: netMargin -187.34% vs -170.0% from netIncome/FY-revenue
 - LAES: netMargin -187.34% out of [-100, 100]
