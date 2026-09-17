@@ -98,47 +98,51 @@ def rev_growth_q(t):
 def fcf_fy(t):
     """Latest full fiscal year free cash flow, from the annual cash-flow statement.
 
-    Pairs with the fiscal-year revenue in revHist to give Rule of 40 two terms
-    measured over the same twelve months, and gives validate_data.py a reported
-    figure to check the trailing number against."""
+    Same rule as fcf_ttm: operating cash flow minus capex, and None when either
+    line is absent, so a bank's operating cash flow never ships labelled as FCF.
+    Pairs with the fiscal-year revenue in revHist so Rule of 40 measures both of
+    its terms over the same twelve months."""
     try:
         cf = t.cashflow
         if cf is None or cf.empty: return None
         col = sorted(cf.columns, reverse=True)[0]         # most recent fiscal year
         def row(name):
             return num(cf.loc[name, col]) if name in cf.index else None
-        fcf = row("Free Cash Flow")
-        if fcf is None:
-            ocf, capex = row("Operating Cash Flow"), row("Capital Expenditure")
-            fcf = ocf + capex if (ocf is not None and capex is not None) else None  # capex is negative
-        return fcf
+        ocf, capex = row("Operating Cash Flow"), row("Capital Expenditure")
+        if ocf is None or capex is None: return None
+        return ocf + capex                                # capex is negative
     except Exception:
         return None
 
 def fcf_ttm(t):
-    """Trailing-twelve-month free cash flow from the cash-flow statement.
+    """Trailing-twelve-month free cash flow, built from the two statement lines it needs.
 
     Deliberately NOT info["freeCashflow"]: that is Yahoo's proprietary "levered
     free cash flow", which deducts far more than capex (for NVDA it reads a third
-    of operating cash flow minus capex). Sums the last four reported quarters of
-    the statement's own Free Cash Flow row, falling back to OCF - capex.
-    Returns None rather than a partial sum if any quarter is missing."""
+    of operating cash flow minus capex).
+
+    Also deliberately not the statement's own Free Cash Flow row. Where Yahoo
+    carries no Capital Expenditure row (banks, COIN, ABNB) that row is operating
+    cash flow relabelled, and where capex is only partly populated (TMUS) it
+    deducts a fraction of a year. Computing it here means every stored fcf
+    reconciles to ocf + capex, which validate_data.py enforces as a hard check.
+
+    Returns (fcf, ocf, capex), all None unless four complete quarters of both
+    lines are present — a partial year is worse than no number."""
     try:
         q = t.quarterly_cashflow
-        if q is None or q.empty: return None
-        cols = list(q.columns)[:4]
-        if len(cols) < 4: return None
+        if q is None or q.empty: return None, None, None
+        cols = sorted(q.columns, reverse=True)[:4]
+        if len(cols) < 4: return None, None, None
         def ttm(row):
             if row not in q.index: return None
             vals = [num(v) for v in q.loc[row, cols]]
             return sum(vals) if all(v is not None for v in vals) else None
-        fcf = ttm("Free Cash Flow")
-        if fcf is None:
-            ocf, capex = ttm("Operating Cash Flow"), ttm("Capital Expenditure")
-            fcf = ocf + capex if (ocf is not None and capex is not None) else None  # capex is negative
-        return fcf
+        ocf, capex = ttm("Operating Cash Flow"), ttm("Capital Expenditure")
+        if ocf is None or capex is None: return None, None, None
+        return ocf + capex, ocf, capex          # capex is negative on the statement
     except Exception:
-        return None
+        return None, None, None
 
 def build(tk):
     t=yf.Ticker(tk)
@@ -148,7 +152,8 @@ def build(tk):
     if price is None: return None
     high=num(i.get("fiftyTwoWeekHigh"))
     rev=num(i.get("totalRevenue"))
-    fcf=to_b(fcf_ttm(t))
+    fcf_raw,ocf_raw,capex_raw=fcf_ttm(t)
+    fcf=to_b(fcf_raw)
     rh=rev_history(t)
     fy_rev=rh[-1]["r"] if rh else None          # $B, latest full fiscal year
     fy_fcf=to_b(fcf_fy(t))
@@ -174,7 +179,10 @@ def build(tk):
       "ebitdaMargin":pct(i.get("ebitdaMargins")),
       "eps":num(i.get("trailingEps")),
       "netIncome":to_b(i.get("netIncomeToCommon")),
+      "revTTM":to_b(rev),      # info["totalRevenue"] is TTM — persisted so margins reconcile
       "fcf":fcf,
+      "ocf":to_b(ocf_raw),     # the two statement lines fcf is built from, so it stays checkable
+      "capex":to_b(capex_raw),
       "fcfMargin":round(fcf*1e9/rev*100,2) if (fcf is not None and rev) else None,   # TTM over TTM revenue
       "fcfFY":fy_fcf,
       "fcfMarginFY":round(fy_fcf/fy_rev*100,2) if (fy_fcf is not None and fy_rev) else None,

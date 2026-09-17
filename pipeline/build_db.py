@@ -12,7 +12,7 @@ DB_PATH = os.environ.get("DB_OUT", os.path.join(ROOT, "terminal.db"))  # DB_OUT:
 TEXT = {"ticker", "name", "sector", "industry", "rating", "impliedFrom"}
 FIELDS = ["ticker", "name", "sector", "industry", "price", "marketCap", "ev", "high52",
           "distHigh", "revGrowthFY", "revGrowthQ", "earnGrowth", "netMargin", "grossMargin", "ebitdaMargin",
-          "eps", "netIncome", "fcf", "fcfMargin", "fcfFY", "fcfMarginFY", "cash", "debt", "debtEquity", "currentRatio",
+          "eps", "netIncome", "revTTM", "fcf", "ocf", "capex", "fcfMargin", "fcfFY", "fcfMarginFY", "cash", "debt", "debtEquity", "currentRatio",
           "roe", "pe", "forwardPE", "peg", "evEbitda", "evFcf", "divYield", "rating",
           "numAnalysts", "ptAvg", "ptLow", "ptHigh", "upside",
           "impliedPrice", "impliedUpside", "impliedFrom"]

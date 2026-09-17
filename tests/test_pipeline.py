@@ -90,14 +90,15 @@ def annual_cf_frame(rows):
 
 
 def test_fcf_fy_takes_the_most_recent_fiscal_year():
-    cf = annual_cf_frame({"Free Cash Flow": [96e9, 60e9]})
-    assert build_data.fcf_fy(FakeTicker(cashflow=cf)) == 96e9
-
-
-def test_fcf_fy_falls_back_to_ocf_minus_capex():
     cf = annual_cf_frame({"Operating Cash Flow": [102e9, 64e9],
                           "Capital Expenditure": [-6e9, -3e9]})
     assert build_data.fcf_fy(FakeTicker(cashflow=cf)) == 96e9
+
+
+def test_fcf_fy_is_none_without_a_capex_row():
+    cf = annual_cf_frame({"Free Cash Flow": [96e9, 60e9],
+                          "Operating Cash Flow": [102e9, 64e9]})
+    assert build_data.fcf_fy(FakeTicker(cashflow=cf)) is None
 
 
 def test_fcf_fy_survives_garbage():
@@ -114,27 +115,53 @@ def cf_frame(rows, n=4):
         [list(v)[:n] for v in rows.values()], index=list(rows), columns=cols[:n])
 
 
-def test_fcf_ttm_sums_four_quarters_of_the_statement_row():
-    cf = cf_frame({"Free Cash Flow": [40e9, 30e9, 20e9, 10e9]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == 100e9
+def test_fcf_ttm_is_ocf_minus_capex_not_the_vendor_free_cash_flow_row():
+    # the Free Cash Flow row is deliberately wrong here — it must be ignored
+    cf = cf_frame({"Free Cash Flow": [44e9, 33e9, 22e9, 11e9],
+                   "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9],
+                   "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (100e9, 110e9, -10e9)
 
 
-def test_fcf_ttm_falls_back_to_ocf_minus_capex():
+def test_fcf_ttm_is_none_when_the_source_carries_no_capex_row():
+    # banks, COIN, ABNB: Yahoo's Free Cash Flow row is operating cash flow relabelled
+    cf = cf_frame({"Free Cash Flow": [44e9, 33e9, 22e9, 11e9],
+                   "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9]})
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (None, None, None)
+
+
+def test_fcf_ttm_is_none_when_capex_covers_only_part_of_the_year():
+    # TMUS: capex populated in one quarter of four
+    cf = cf_frame({"Operating Cash Flow": [44e9, 33e9, 22e9, 11e9],
+                   "Capital Expenditure": [-4e9, float("nan"), float("nan"), float("nan")]})
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (None, None, None)
+
+
+def test_fcf_ttm_reports_the_lines_it_used():
     cf = cf_frame({"Operating Cash Flow": [40e9, 30e9, 20e9, 10e9],
                    "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == 90e9
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (90e9, 100e9, -10e9)
+
+
+def test_fcf_ttm_returns_the_lines_validate_data_reconciles_against():
+    # ocf + capex must reproduce fcf — this is the pair the hard check uses
+    cf = cf_frame({"Free Cash Flow": [40e9, 30e9, 20e9, 10e9],
+                   "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9],
+                   "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
+    fcf, ocf, capex = build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf))
+    assert ocf + capex == fcf
+    assert capex < 0
 
 
 def test_fcf_ttm_is_none_on_a_partial_year_rather_than_understating():
-    cf = cf_frame({"Free Cash Flow": [40e9, 30e9, 20e9]}, n=3)
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) is None
-    cf = cf_frame({"Free Cash Flow": [40e9, float("nan"), 20e9, 10e9]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) is None
+    cf = cf_frame({"Operating Cash Flow": [40e9, 30e9, 20e9],
+                   "Capital Expenditure": [-4e9, -3e9, -2e9]}, n=3)
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (None, None, None)
 
 
 def test_fcf_ttm_survives_garbage():
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=None)) is None
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=pd.DataFrame())) is None
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=None)) == (None, None, None)
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=pd.DataFrame())) == (None, None, None)
 
 
 # ---------- build_prices.tech_from_close ----------

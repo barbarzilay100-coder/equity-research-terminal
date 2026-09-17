@@ -2,7 +2,8 @@
 """Reconciliation + bounds validation for data.json.
 
 Recomputes every derivable field from its stored inputs (upside, distHigh,
-impliedUpside, EV/FCF; net & FCF margin against the latest annual revenue),
+impliedUpside, EV/FCF; free cash flow against the operating-cash-flow and capex
+lines it is built from; margins against the revenue of their own period),
 bounds-checks the rest, writes docs/validation-report.md, and exits 1 on hard
 anomalies so CI never commits a broken dataset. Before this, the only guard
 was a row count.
@@ -10,7 +11,7 @@ was a row count.
 Hard FAIL  -> derived field disagrees with its own inputs, duplicate ticker,
               non-positive price, shrunken universe (pipeline bug territory).
 WARN       -> source-data oddities worth eyeballing (extreme multiples or
-              implied upside, margin vs FY-revenue divergence, missing sector).
+              implied upside, vendor net margin vs TTM revenue, missing sector).
 """
 import datetime, json, os, sys
 
@@ -55,18 +56,38 @@ for c in cos:
         exp = c["ev"] / c["fcf"]
         if abs(c["evFcf"] - exp) > max(0.06, abs(exp) * 0.02):
             fails.append(f"{t}: evFcf {c['evFcf']} != {exp:.1f} recomputed from ev/fcf")
-    # --- margins vs latest annual revenue (TTM-vs-FY mismatch tolerated: warn)
-    rh = c.get("revHist") or []
-    rev = rh[-1].get("r") if rh else None
-    if rev:
-        if c.get("netIncome") is not None and c.get("netMargin") is not None:
-            exp = c["netIncome"] / rev * 100
-            if abs(exp - c["netMargin"]) > 8:
-                warns.append(f"{t}: netMargin {c['netMargin']}% vs {exp:.1f}% from netIncome/FY-revenue")
+    # --- free cash flow must BE the statement lines it claims to come from.
+    # This is the guard the original bug slipped through: fcf used to be Yahoo's
+    # "levered free cash flow", which is not operating cash flow minus capex, and
+    # nothing here compared it to the cash-flow statement. A ratio check cannot
+    # catch a wrong numerator — only this can.
+    if c.get("fcf") is not None and c.get("ocf") is not None and c.get("capex") is not None:
+        exp = c["ocf"] + c["capex"]                      # capex is negative
+        if abs(c["fcf"] - exp) > max(0.05, abs(exp) * 0.01):
+            fails.append(f"{t}: fcf {c['fcf']}B != {exp:.3f}B from ocf {c['ocf']} + capex {c['capex']}")
+    elif c.get("fcf") is not None:
+        fails.append(f"{t}: fcf {c['fcf']}B stored without ocf/capex — not reconcilable to the statement")
+    if c.get("capex") is not None and c["capex"] > 0:
+        fails.append(f"{t}: capex {c['capex']}B is positive — sign convention broke")
+
+    # --- margins against the revenue of their own period (both TTM: hard check)
+    if c.get("revTTM"):
         if c.get("fcf") is not None and c.get("fcfMargin") is not None:
-            exp = c["fcf"] / rev * 100
-            if abs(exp - c["fcfMargin"]) > 8:
-                warns.append(f"{t}: fcfMargin {c['fcfMargin']}% vs {exp:.1f}% from fcf/FY-revenue")
+            exp = c["fcf"] / c["revTTM"] * 100
+            if abs(exp - c["fcfMargin"]) > TOL_PP:
+                fails.append(f"{t}: fcfMargin {c['fcfMargin']}% != {exp:.2f}% from fcf/TTM-revenue")
+        if c.get("netIncome") is not None and c.get("netMargin") is not None:
+            exp = c["netIncome"] / c["revTTM"] * 100
+            if abs(exp - c["netMargin"]) > 5:
+                warns.append(f"{t}: netMargin {c['netMargin']}% vs {exp:.1f}% from netIncome/TTM-revenue")
+
+    # --- fiscal-year margin against fiscal-year revenue (same year, hard check)
+    rh = c.get("revHist") or []
+    fy_rev = rh[-1].get("r") if rh else None
+    if fy_rev and c.get("fcfFY") is not None and c.get("fcfMarginFY") is not None:
+        exp = c["fcfFY"] / fy_rev * 100
+        if abs(exp - c["fcfMarginFY"]) > TOL_PP:
+            fails.append(f"{t}: fcfMarginFY {c['fcfMarginFY']}% != {exp:.2f}% from fcfFY/FY-revenue")
     # --- bounds
     if c.get("peg") is not None and (c["peg"] < 0 or c["peg"] > 10):
         warns.append(f"{t}: PEG {c['peg']} out of [0, 10]")
