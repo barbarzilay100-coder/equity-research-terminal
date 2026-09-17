@@ -69,9 +69,74 @@ def rev_history(t):
             if r is None: continue
             y="FY"+str(getattr(c,"year",c))[2:]
             g=round((r-prev)/prev*100,1) if prev else None
-            pts.append({"y":y,"r":round(r/1e9,2),"g":g})
+            end=getattr(c,"date",lambda:None)()
+            pts.append({"y":y,"r":round(r/1e9,2),"g":g,"end":end.isoformat() if end else None})
             prev=r
         return pts if len(pts)>=2 else None
+    except Exception:
+        return None
+
+def rev_growth_q(t):
+    """Latest reported quarter vs the year-ago quarter, in percent.
+
+    Recomputed here rather than taken from info["revenueGrowth"] so the period is
+    the pipeline's own definition, not a vendor field the front end can mislabel.
+    A trailing-twelve-month growth read is NOT available: Yahoo caps the quarterly
+    statement at five quarters, so the year-ago TTM window cannot be summed. The
+    longer-period read is therefore the fiscal year, off revHist."""
+    try:
+        q = t.quarterly_income_stmt
+        if q is None or q.empty or "Total Revenue" not in q.index: return None
+        cols = sorted(q.columns, reverse=True)            # newest quarter first
+        if len(cols) < 5: return None
+        rev = [num(v) for v in q.loc["Total Revenue", cols]]
+        new, old = rev[0], rev[4]
+        return round((new - old) / old * 100, 2) if (new is not None and old) else None
+    except Exception:
+        return None
+
+def fcf_fy(t):
+    """Latest full fiscal year free cash flow, from the annual cash-flow statement.
+
+    Pairs with the fiscal-year revenue in revHist to give Rule of 40 two terms
+    measured over the same twelve months, and gives validate_data.py a reported
+    figure to check the trailing number against."""
+    try:
+        cf = t.cashflow
+        if cf is None or cf.empty: return None
+        col = sorted(cf.columns, reverse=True)[0]         # most recent fiscal year
+        def row(name):
+            return num(cf.loc[name, col]) if name in cf.index else None
+        fcf = row("Free Cash Flow")
+        if fcf is None:
+            ocf, capex = row("Operating Cash Flow"), row("Capital Expenditure")
+            fcf = ocf + capex if (ocf is not None and capex is not None) else None  # capex is negative
+        return fcf
+    except Exception:
+        return None
+
+def fcf_ttm(t):
+    """Trailing-twelve-month free cash flow from the cash-flow statement.
+
+    Deliberately NOT info["freeCashflow"]: that is Yahoo's proprietary "levered
+    free cash flow", which deducts far more than capex (for NVDA it reads a third
+    of operating cash flow minus capex). Sums the last four reported quarters of
+    the statement's own Free Cash Flow row, falling back to OCF - capex.
+    Returns None rather than a partial sum if any quarter is missing."""
+    try:
+        q = t.quarterly_cashflow
+        if q is None or q.empty: return None
+        cols = list(q.columns)[:4]
+        if len(cols) < 4: return None
+        def ttm(row):
+            if row not in q.index: return None
+            vals = [num(v) for v in q.loc[row, cols]]
+            return sum(vals) if all(v is not None for v in vals) else None
+        fcf = ttm("Free Cash Flow")
+        if fcf is None:
+            ocf, capex = ttm("Operating Cash Flow"), ttm("Capital Expenditure")
+            fcf = ocf + capex if (ocf is not None and capex is not None) else None  # capex is negative
+        return fcf
     except Exception:
         return None
 
@@ -83,7 +148,10 @@ def build(tk):
     if price is None: return None
     high=num(i.get("fiftyTwoWeekHigh"))
     rev=num(i.get("totalRevenue"))
-    fcf=to_b(i.get("freeCashflow"))
+    fcf=to_b(fcf_ttm(t))
+    rh=rev_history(t)
+    fy_rev=rh[-1]["r"] if rh else None          # $B, latest full fiscal year
+    fy_fcf=to_b(fcf_fy(t))
     de=num(i.get("debtToEquity"))
     ptavg=num(i.get("targetMeanPrice"))
     d={
@@ -96,8 +164,10 @@ def build(tk):
       "ev":to_b(i.get("enterpriseValue")),
       "high52":round(high,2) if high else None,
       "distHigh":round((price-high)/high*100,1) if high else None,
-      "revHist":rev_history(t),
-      "revGrowth":pct(i.get("revenueGrowth")),
+      "revHist":rh,
+      "revGrowthFY":rh[-1]["g"] if rh else None,   # latest full fiscal year vs the prior one
+      "fyEnd":rh[-1].get("end") if rh else None,   # that year's end date — FY figures lag by up to a year
+      "revGrowthQ":rev_growth_q(t),                # latest reported quarter vs the year-ago quarter
       "earnGrowth":pct(i.get("earningsGrowth")),
       "netMargin":pct(i.get("profitMargins")),
       "grossMargin":pct(i.get("grossMargins")),
@@ -105,7 +175,9 @@ def build(tk):
       "eps":num(i.get("trailingEps")),
       "netIncome":to_b(i.get("netIncomeToCommon")),
       "fcf":fcf,
-      "fcfMargin":round(fcf*1e9/rev*100,2) if (fcf is not None and rev) else None,
+      "fcfMargin":round(fcf*1e9/rev*100,2) if (fcf is not None and rev) else None,   # TTM over TTM revenue
+      "fcfFY":fy_fcf,
+      "fcfMarginFY":round(fy_fcf/fy_rev*100,2) if (fy_fcf is not None and fy_rev) else None,
       "cash":to_b(i.get("totalCash")),
       "debt":to_b(i.get("totalDebt")),
       "debtEquity":round(de/100,2) if de is not None else None,

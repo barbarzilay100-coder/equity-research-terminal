@@ -11,7 +11,7 @@ ORDER BY sector, roe DESC;
 
 -- 2. Sector profile: size, average growth and profitability (sectors with 5+ names)
 SELECT sector, COUNT(*) AS n,
-       ROUND(AVG(revGrowth), 1) AS avg_rev_growth,
+       ROUND(AVG(revGrowthFY), 1) AS avg_rev_growth_fy,
        ROUND(AVG(netMargin), 1) AS avg_net_margin
 FROM companies
 GROUP BY sector HAVING COUNT(*) >= 5

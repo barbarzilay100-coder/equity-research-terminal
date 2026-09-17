@@ -29,6 +29,8 @@ OUT_XLSX = os.path.join(ROOT, "docs", "valuation-models.xlsx")
 payload = json.load(open(os.path.join(ROOT, "data.json")))
 co = {c["ticker"]: c for c in payload["companies"]}
 msft, avgo = co["MSFT"], co["AVGO"]
+if not msft.get("fcf"):   # fcf is null when the source is missing a quarter — fail loudly, not mid-formula
+    raise SystemExit("build_excel: MSFT has no trailing FCF in data.json — cannot build the DCF")
 peers = [c for c in payload["companies"]
          if c["sector"] == "Technology" and "Semiconductor" in c["industry"]
          and c["ticker"] != "AVGO" and (c.get("evEbitda") or 0) > 0 and (c.get("forwardPE") or 0) > 0]
@@ -52,9 +54,10 @@ put(ws, "A2", "Blue = hardcoded input (edit these) · Yellow = key levers · Bla
 put(ws, "A4", "As of (data snapshot)"); put(ws, "B4", payload["generated"], color=BLUE)
 put(ws, "A5", "Source"); put(ws, "B5", "Yahoo Finance via yfinance pipeline (data.json)", color=BLUE)
 put(ws, "A7", "Base FCF ($B, trailing)"); put(ws, "B7", msft["fcf"], USD_B, color=BLUE,
-    note=f"freeCashflow, snapshot {payload['generated']}. Trailing FCF is capex-depressed: net income is ${msft['netIncome']}B.")
+    note=f"Trailing twelve months: operating cash flow minus capex, summed from the last four quarterly "
+         f"cash-flow statements. Snapshot {payload['generated']}. Net income over the same period is ${msft['netIncome']}B.")
 put(ws, "A8", "FCF growth, years 1-5"); put(ws, "B8", 0.10, PCT, color=BLUE, key=True,
-    note=f"Deliberate lever. Snapshot trailing revenue growth is {msft['revGrowth']}% — 10% assumes FCF grows below revenue while capex stays elevated.")
+    note=f"Deliberate lever. Snapshot fiscal-year revenue growth is {msft['revGrowthFY']}% — 10% assumes FCF grows below revenue while capex stays elevated.")
 put(ws, "A9", "Terminal growth"); put(ws, "B9", 0.025, PCT, color=BLUE, key=True,
     note="Long-run nominal GDP-ish growth; must stay below WACC.")
 put(ws, "A10", "WACC"); put(ws, "B10", 0.09, PCT, color=BLUE, key=True,
@@ -93,8 +96,9 @@ put(ws, "A13", "Equity value ($B)");                put(ws, "B13", "=B11-B12", U
 put(ws, "A14", "Implied value per share ($)");      put(ws, "B14", "=B13/SharesOut", USD_PS, bold=True, key=True)
 put(ws, "A15", "Market price ($)");                 put(ws, "B15", "=MktPrice", USD_PS, color=GREEN)
 put(ws, "A16", "Implied upside/(downside)");        put(ws, "B16", "=B14/B15-1", PCT, bold=True)
-put(ws, "A18", "Reading the gap: trailing FCF is capex-depressed (net income ~3x FCF in the snapshot), so a", color=BLUE)
-put(ws, "A19", "conservative trailing-FCF DCF reads far below market — the price embeds AI-cycle FCF normalization.", color=BLUE)
+put(ws, "A18", "Reading the gap: the base case compounds trailing FCF at a flat rate with no margin expansion,", color=BLUE)
+put(ws, "A19", f"so it reads below market. Net income is {msft['netIncome']/msft['fcf']:.1f}x trailing FCF — "
+               "this model values cash conversion, not accounting profit.", color=BLUE)
 put(ws, "A20", "Flex the growth lever (Assumptions!B8) and the table below to see what is being priced in.", color=BLUE)
 
 put(ws, "A22", "Sensitivity — implied value per share ($): WACC (rows) × terminal growth (columns)", bold=True)

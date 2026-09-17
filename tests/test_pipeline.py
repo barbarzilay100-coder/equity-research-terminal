@@ -21,8 +21,12 @@ import build_prices
 # ---------- build_data.rev_history ----------
 
 class FakeTicker:
-    def __init__(self, income_stmt):
+    def __init__(self, income_stmt=None, quarterly_cashflow=None,
+                 quarterly_income_stmt=None, cashflow=None):
         self.income_stmt = income_stmt
+        self.quarterly_cashflow = quarterly_cashflow
+        self.quarterly_income_stmt = quarterly_income_stmt
+        self.cashflow = cashflow
 
 
 def fin_frame(revs_by_year):
@@ -52,6 +56,85 @@ def test_rev_history_needs_two_points():
 def test_rev_history_survives_garbage():
     assert build_data.rev_history(FakeTicker(None)) is None
     assert build_data.rev_history(FakeTicker(pd.DataFrame())) is None
+
+
+# ---------- build_data.rev_growth_q / fcf_fy ----------
+
+def q_rev_frame(revs_newest_first):
+    """Quarterly income statement, columns deliberately out of order — the helper sorts."""
+    n = len(revs_newest_first)
+    cols = [pd.Timestamp("2026-07-31") - pd.DateOffset(months=3 * k) for k in range(n)]
+    df = pd.DataFrame([revs_newest_first], index=["Total Revenue"], columns=cols)
+    return df[sorted(df.columns)]          # ascending on purpose
+
+
+def test_rev_growth_q_compares_the_latest_quarter_to_the_year_ago_quarter():
+    # newest 40 vs the fifth column back, 10 -> +300%; the three between are ignored
+    assert build_data.rev_growth_q(FakeTicker(
+        quarterly_income_stmt=q_rev_frame([40e9, 30e9, 20e9, 10e9, 10e9]))) == 300.0
+
+
+def test_rev_growth_q_needs_the_year_ago_quarter():
+    assert build_data.rev_growth_q(FakeTicker(
+        quarterly_income_stmt=q_rev_frame([40e9, 30e9, 20e9, 10e9]))) is None
+
+
+def test_rev_growth_q_survives_garbage():
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=None)) is None
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=pd.DataFrame())) is None
+
+
+def annual_cf_frame(rows):
+    cols = [pd.Timestamp("2026-01-31"), pd.Timestamp("2025-01-31")]
+    return pd.DataFrame([list(v) for v in rows.values()], index=list(rows), columns=cols)
+
+
+def test_fcf_fy_takes_the_most_recent_fiscal_year():
+    cf = annual_cf_frame({"Free Cash Flow": [96e9, 60e9]})
+    assert build_data.fcf_fy(FakeTicker(cashflow=cf)) == 96e9
+
+
+def test_fcf_fy_falls_back_to_ocf_minus_capex():
+    cf = annual_cf_frame({"Operating Cash Flow": [102e9, 64e9],
+                          "Capital Expenditure": [-6e9, -3e9]})
+    assert build_data.fcf_fy(FakeTicker(cashflow=cf)) == 96e9
+
+
+def test_fcf_fy_survives_garbage():
+    assert build_data.fcf_fy(FakeTicker(cashflow=None)) is None
+    assert build_data.fcf_fy(FakeTicker(cashflow=pd.DataFrame())) is None
+
+
+# ---------- build_data.fcf_ttm ----------
+
+def cf_frame(rows, n=4):
+    cols = [pd.Timestamp(f"2026-{m:02d}-30") for m in (7, 4, 1)][:n] + \
+           [pd.Timestamp("2025-10-30")][: max(0, n - 3)]
+    return pd.DataFrame(
+        [list(v)[:n] for v in rows.values()], index=list(rows), columns=cols[:n])
+
+
+def test_fcf_ttm_sums_four_quarters_of_the_statement_row():
+    cf = cf_frame({"Free Cash Flow": [40e9, 30e9, 20e9, 10e9]})
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == 100e9
+
+
+def test_fcf_ttm_falls_back_to_ocf_minus_capex():
+    cf = cf_frame({"Operating Cash Flow": [40e9, 30e9, 20e9, 10e9],
+                   "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == 90e9
+
+
+def test_fcf_ttm_is_none_on_a_partial_year_rather_than_understating():
+    cf = cf_frame({"Free Cash Flow": [40e9, 30e9, 20e9]}, n=3)
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) is None
+    cf = cf_frame({"Free Cash Flow": [40e9, float("nan"), 20e9, 10e9]})
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) is None
+
+
+def test_fcf_ttm_survives_garbage():
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=None)) is None
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=pd.DataFrame())) is None
 
 
 # ---------- build_prices.tech_from_close ----------
