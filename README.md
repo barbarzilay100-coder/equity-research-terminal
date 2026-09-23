@@ -31,7 +31,7 @@ A live, single-page **equity research terminal** covering the US large-cap unive
 | `pipeline/build_events.py` — SEC EDGAR filings pipeline; Deal Radar built from 8-K item codes, S-4/425, 13D/G | M&A awareness, working with primary sources |
 | Deterministic GARP scorecard — 8 pass/fail criteria per company | Financial statement analysis |
 | Sector-relative implied valuation — peer-median EV/EBITDA & forward P/E repricing | Relative valuation (comps) |
-| CI-gated e2e test + [data validation](docs/validation-report.md) — reconciliation & bounds checks gate every refresh | Accuracy, reconciliation & attention to detail |
+| CI-gated e2e test + [data validation](docs/validation-report.md) — every derived figure, including free cash flow against operating cash flow and capex, must reconcile to its inputs before a refresh is committed; outliers are flagged | Accuracy, reconciliation & attention to detail |
 | Sector heatmap, screener, leaderboards, side-by-side compare | BI dashboards & data visualization |
 | [Excel valuation workbook](docs/valuation-models.xlsx) — 5-yr DCF + trading comps, named ranges, sensitivity table | Advanced Excel & financial modeling |
 | SQLite snapshot (`terminal.db`) + [windowed analytical queries](sql/queries.sql) | SQL |
@@ -137,10 +137,12 @@ node tests/e2e.cjs
 The CI workflow runs it after every data refresh — if the data or the app breaks,
 nothing gets committed.
 
-A separate validation step (`pipeline/validate_data.py`) reconciles every derivable field against its
-inputs (analyst upside, implied upside, EV/FCF, margins vs. reported revenue), bounds-checks
-the rest, and hard-fails the workflow on anomalies. Each run's findings are committed as
-[docs/validation-report.md](docs/validation-report.md).
+A separate validation step (`pipeline/validate_data.py`) recomputes every derived field from its
+stored inputs — analyst and implied upside, distance from the 52-week high, EV/FCF, free cash flow
+from operating cash flow and capex, each FCF margin from its own period's revenue — and hard-fails
+the workflow on any mismatch, or when a statement-derived field goes missing across the universe.
+Bounds checks and source-data oddities are reported as warnings. Each run's findings are committed
+as [docs/validation-report.md](docs/validation-report.md).
 
 ## Stack
 
