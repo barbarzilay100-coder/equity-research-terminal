@@ -309,6 +309,13 @@ function criterionApplies(name,sector){
   return true;
 }
 function fyTag(d){ return d.fyEnd?` · FY ended ${d.fyEnd}`:''; }
+/* FCF card sub-line: only the margins that exist, so a missing one never leaves a dangling "— margin". */
+function fcfSub(d){
+  const parts=[];
+  if(d.fcfMargin!=null) parts.push(`${ppct(d.fcfMargin)} margin`);
+  if(d.fcfMarginFY!=null) parts.push(`FY ${ppct(d.fcfMarginFY)}${fyTag(d)}`);
+  return parts.join(' · ');
+}
 function buildChecklist(d){
   /* Both Rule of 40 terms are measured over the same fiscal year. A TTM pair is not
      available: Yahoo caps the quarterly statement at five quarters, so a year-ago TTM
@@ -523,14 +530,14 @@ function financialsHTML(d,sc){
   <div class="section">
     <h2>Cash Flow &amp; Balance Sheet</h2>
     <div class="grid4">
-      <div class="kpi"><div class="l">Free Cash Flow (TTM)</div><div class="v">${fmtB(d.fcf)}</div><div class="s">${ppct(d.fcfMargin)} margin · FY ${ppct(d.fcfMarginFY)}${fyTag(d)}</div></div>
+      <div class="kpi"><div class="l">Free Cash Flow (TTM)</div><div class="v">${fmtB(d.fcf)}</div><div class="s">${fcfSub(d)}</div></div>
       <div class="kpi"><div class="l">Cash</div><div class="v">${fmtB(d.cash)}</div></div>
       <div class="kpi"><div class="l">Total Debt</div><div class="v">${fmtB(d.debt)}</div></div>
       <div class="kpi"><div class="l">Debt / Equity</div><div class="v">${d.debtEquity!=null?d.debtEquity.toFixed(2):'—'}</div></div>
       <div class="kpi"><div class="l">Return on Equity</div><div class="v">${ppct(d.roe)}</div></div>
       <div class="kpi"><div class="l">Current Ratio</div><div class="v">${d.currentRatio!=null?d.currentRatio.toFixed(2):'—'}</div></div>
       <div class="kpi"><div class="l">Net Income (TTM)</div><div class="v">${fmtB(d.netIncome)}</div></div>
-      <div class="kpi"><div class="l">Rule of 40</div><div class="v">${sc.ruleOf40!=null?sc.ruleOf40.toFixed(0):'—'}</div></div>
+      <div class="kpi"><div class="l">Rule of 40 (FY)</div><div class="v">${sc.ruleOf40!=null?sc.ruleOf40.toFixed(0):'—'}</div></div>
     </div>
   </div>`;
 }
@@ -767,7 +774,7 @@ function renderMarket(){
     return `<div class="heatcell" style="background:${col.bg}" onclick="gotoScreenerSector('${o.s.replace(/'/g,"\\'")}')">
       <div class="hs-sec" style="color:${col.fg}">${o.s}</div>
       <div class="hs-sc" style="color:${col.fg}">${Math.round(o.avgRatio*100)}%</div>
-      <div class="hs-meta" style="color:${col.fg}">${o.n} names · rev ${pct(o.avgRev)}</div>
+      <div class="hs-meta" style="color:${col.fg}">${o.n} names · FY rev ${pct(o.avgRev)}</div>
     </div>`;
   }).join('');
 
