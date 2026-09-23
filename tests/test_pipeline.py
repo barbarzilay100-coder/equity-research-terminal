@@ -58,25 +58,42 @@ def test_rev_history_survives_garbage():
     assert build_data.rev_history(FakeTicker(pd.DataFrame())) is None
 
 
-# ---------- build_data.rev_growth_q / fcf_fy ----------
+# ---------- build_data: quarterly helpers (rev_growth_q, ttm_window, fcf_ttm) ----------
 
-def q_rev_frame(revs_newest_first):
-    """Quarterly income statement, columns deliberately out of order — the helper sorts."""
-    n = len(revs_newest_first)
-    cols = [pd.Timestamp("2026-07-31") - pd.DateOffset(months=3 * k) for k in range(n)]
-    df = pd.DataFrame([revs_newest_first], index=["Total Revenue"], columns=cols)
-    return df[sorted(df.columns)]          # ascending on purpose
+NAN = float("nan")
+# Real quarter-end dates, newest first. A 52/53-week year shifts these by a few days,
+# which the helpers must tolerate; the tests use calendar quarters.
+QTRS = [pd.Timestamp(d) for d in
+        ("2026-07-31", "2026-04-30", "2026-01-31", "2025-10-31", "2025-07-31", "2025-04-30")]
+
+
+def q_frame(rows, dates=QTRS):
+    """A quarterly statement. `rows` maps a line to its values, newest first; NAN is a
+    quarter Yahoo left empty. Columns come back oldest-first — the opposite of what the
+    helpers want — so every test also proves they sort by date."""
+    n = len(next(iter(rows.values())))
+    df = pd.DataFrame([list(v) for v in rows.values()], index=list(rows), columns=list(dates)[:n])
+    return df[sorted(df.columns)]
 
 
 def test_rev_growth_q_compares_the_latest_quarter_to_the_year_ago_quarter():
-    # newest 40 vs the fifth column back, 10 -> +300%; the three between are ignored
-    assert build_data.rev_growth_q(FakeTicker(
-        quarterly_income_stmt=q_rev_frame([40e9, 30e9, 20e9, 10e9, 10e9]))) == 300.0
+    # 2026-07-31 (40) vs 2025-07-31 (10); the older 2025-04-30 (1) must not be used
+    inc = q_frame({"Total Revenue": [40e9, 30e9, 20e9, 10e9, 10e9, 1e9]})
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=inc)) == 300.0
 
 
-def test_rev_growth_q_needs_the_year_ago_quarter():
-    assert build_data.rev_growth_q(FakeTicker(
-        quarterly_income_stmt=q_rev_frame([40e9, 30e9, 20e9, 10e9]))) is None
+def test_rev_growth_q_skips_an_empty_placeholder_quarter():
+    # Yahoo opens the frame with the not-yet-reported quarter: compare 2026-04-30 with 2025-04-30
+    inc = q_frame({"Total Revenue": [NAN, 40e9, 30e9, 20e9, 10e9, 10e9]})
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=inc)) == 300.0
+
+
+def test_rev_growth_q_is_none_without_the_year_ago_quarter():
+    short = q_frame({"Total Revenue": [40e9, 30e9, 20e9, 10e9]})
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=short)) is None
+    # year-ago quarter empty: must not fall back to the quarter fifteen months back
+    holed = q_frame({"Total Revenue": [40e9, 30e9, 20e9, 10e9, NAN, 5e9]})
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=holed)) is None
 
 
 def test_rev_growth_q_survives_garbage():
@@ -84,84 +101,113 @@ def test_rev_growth_q_survives_garbage():
     assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=pd.DataFrame())) is None
 
 
-def annual_cf_frame(rows):
-    cols = [pd.Timestamp("2026-01-31"), pd.Timestamp("2025-01-31")]
-    return pd.DataFrame([list(v) for v in rows.values()], index=list(rows), columns=cols)
+def cash_and_revenue(ocf, capex, rev, cf_dates=QTRS, rev_dates=QTRS, **extra_cf_rows):
+    return FakeTicker(quarterly_cashflow=q_frame({"Operating Cash Flow": ocf, "Capital Expenditure": capex,
+                                                 **extra_cf_rows}, cf_dates),
+                      quarterly_income_stmt=q_frame({"Total Revenue": rev}, rev_dates))
 
 
-def test_fcf_fy_takes_the_most_recent_fiscal_year():
-    cf = annual_cf_frame({"Operating Cash Flow": [102e9, 64e9],
-                          "Capital Expenditure": [-6e9, -3e9]})
-    assert build_data.fcf_fy(FakeTicker(cashflow=cf)) == 96e9
+def test_fcf_ttm_is_ocf_plus_capex_not_the_vendor_free_cash_flow_row():
+    # the statement's Free Cash Flow row is deliberately wrong — it must be ignored
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, 90e9, 80e9, 70e9],
+                         **{"Free Cash Flow": [44e9, 33e9, 22e9, 11e9]})
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
 
 
-def test_fcf_fy_is_none_without_a_capex_row():
-    cf = annual_cf_frame({"Free Cash Flow": [96e9, 60e9],
-                          "Operating Cash Flow": [102e9, 64e9]})
-    assert build_data.fcf_fy(FakeTicker(cashflow=cf)) is None
+def test_fcf_ttm_sums_only_the_four_newest_quarters():
+    # a fifth, older quarter with large values must stay out of the sum
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9, 900e9], [-4e9, -3e9, -2e9, -1e9, -90e9],
+                         [100e9, 90e9, 80e9, 70e9, 900e9])
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
 
 
-def test_fcf_fy_survives_garbage():
-    assert build_data.fcf_fy(FakeTicker(cashflow=None)) is None
-    assert build_data.fcf_fy(FakeTicker(cashflow=pd.DataFrame())) is None
+def test_fcf_ttm_skips_an_empty_placeholder_quarter():
+    t = cash_and_revenue([NAN, 44e9, 33e9, 22e9, 11e9], [NAN, -4e9, -3e9, -2e9, -1e9],
+                         [NAN, 100e9, 90e9, 80e9, 70e9])
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
 
 
-# ---------- build_data.fcf_ttm ----------
-
-def cf_frame(rows, n=4):
-    cols = [pd.Timestamp(f"2026-{m:02d}-30") for m in (7, 4, 1)][:n] + \
-           [pd.Timestamp("2025-10-30")][: max(0, n - 3)]
-    return pd.DataFrame(
-        [list(v)[:n] for v in rows.values()], index=list(rows), columns=cols[:n])
-
-
-def test_fcf_ttm_is_ocf_minus_capex_not_the_vendor_free_cash_flow_row():
-    # the Free Cash Flow row is deliberately wrong here — it must be ignored
-    cf = cf_frame({"Free Cash Flow": [44e9, 33e9, 22e9, 11e9],
-                   "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9],
-                   "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (100e9, 110e9, -10e9)
+def test_fcf_ttm_revenue_covers_the_cash_flow_quarters_not_the_newest_revenue():
+    # revenue is already reported for 2026-07-31, cash flow is not: the margin's
+    # denominator must be the four quarters the numerator covers, without 2026-07-31
+    t = cash_and_revenue([NAN, 44e9, 33e9, 22e9, 11e9], [NAN, -4e9, -3e9, -2e9, -1e9],
+                         [999e9, 100e9, 90e9, 80e9, 70e9])
+    assert build_data.fcf_ttm(t)[3] == 340e9
 
 
 def test_fcf_ttm_is_none_when_the_source_carries_no_capex_row():
-    # banks, COIN, ABNB: Yahoo's Free Cash Flow row is operating cash flow relabelled
-    cf = cf_frame({"Free Cash Flow": [44e9, 33e9, 22e9, 11e9],
-                   "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (None, None, None)
+    t = FakeTicker(quarterly_cashflow=q_frame({"Free Cash Flow": [44e9, 33e9, 22e9, 11e9],
+                                               "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9]}))
+    assert build_data.fcf_ttm(t) == (None, None, None, None)
 
 
-def test_fcf_ttm_is_none_when_capex_covers_only_part_of_the_year():
-    # TMUS: capex populated in one quarter of four
-    cf = cf_frame({"Operating Cash Flow": [44e9, 33e9, 22e9, 11e9],
-                   "Capital Expenditure": [-4e9, float("nan"), float("nan"), float("nan")]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (None, None, None)
+def test_fcf_ttm_is_none_when_capex_is_missing_inside_the_year():
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9, 10e9], [-4e9, NAN, NAN, NAN, -1e9],
+                         [100e9, 90e9, 80e9, 70e9, 60e9])
+    assert build_data.fcf_ttm(t) == (None, None, None, None)
 
 
-def test_fcf_ttm_reports_the_lines_it_used():
-    cf = cf_frame({"Operating Cash Flow": [40e9, 30e9, 20e9, 10e9],
-                   "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (90e9, 100e9, -10e9)
+def test_fcf_ttm_refuses_four_quarters_with_a_hole_in_them():
+    # 2026-01-31 never reported: the four newest dates span fifteen months, not a year
+    holed = [QTRS[0], QTRS[1], QTRS[3], QTRS[4], QTRS[5]]
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9, 10e9], [-4e9, -3e9, -2e9, -1e9, -1e9],
+                         [100e9, 90e9, 80e9, 70e9, 60e9], cf_dates=holed, rev_dates=holed)
+    assert build_data.fcf_ttm(t) == (None, None, None, None)
+
+
+def test_fcf_ttm_keeps_fcf_when_revenue_is_missing_for_one_of_its_quarters():
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, NAN, 80e9, 70e9])
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, None)
 
 
 def test_fcf_ttm_returns_the_lines_validate_data_reconciles_against():
-    # ocf + capex must reproduce fcf — this is the pair the hard check uses
-    cf = cf_frame({"Free Cash Flow": [40e9, 30e9, 20e9, 10e9],
-                   "Operating Cash Flow": [44e9, 33e9, 22e9, 11e9],
-                   "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]})
-    fcf, ocf, capex = build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf))
+    fcf, ocf, capex, _ = build_data.fcf_ttm(cash_and_revenue(
+        [44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, 90e9, 80e9, 70e9]))
     assert ocf + capex == fcf
     assert capex < 0
 
 
-def test_fcf_ttm_is_none_on_a_partial_year_rather_than_understating():
-    cf = cf_frame({"Operating Cash Flow": [40e9, 30e9, 20e9],
-                   "Capital Expenditure": [-4e9, -3e9, -2e9]}, n=3)
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=cf)) == (None, None, None)
-
-
 def test_fcf_ttm_survives_garbage():
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=None)) == (None, None, None)
-    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=pd.DataFrame())) == (None, None, None)
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=None)) == (None, None, None, None)
+    assert build_data.fcf_ttm(FakeTicker(quarterly_cashflow=pd.DataFrame())) == (None, None, None, None)
+
+
+# ---------- build_data.fcf_fy ----------
+
+FY = [pd.Timestamp("2026-01-31"), pd.Timestamp("2025-01-31")]
+
+
+def annual(rows):
+    return pd.DataFrame([list(v) for v in rows.values()], index=list(rows), columns=FY)
+
+
+def test_fcf_fy_reads_the_year_revhist_is_labelled_with():
+    # FY26 revenue not reported yet, so revHist ends at FY25 — while the cash-flow
+    # statement already has FY26. The margin must be FY25 cash over FY25 revenue.
+    years = FY + [pd.Timestamp("2024-01-31")]
+    t = FakeTicker(income_stmt=pd.DataFrame([[NAN, 100e9, 80e9]], index=["Total Revenue"], columns=years),
+                   cashflow=pd.DataFrame([[50e9, 20e9, 10e9], [-10e9, -5e9, -2e9]],
+                                         index=["Operating Cash Flow", "Capital Expenditure"], columns=years))
+    fy_end = build_data.rev_history(t)[-1]["end"]
+    assert fy_end == "2025-01-31"
+    assert build_data.fcf_fy(t, fy_end) == (15e9, 100e9)
+
+
+def test_fcf_fy_is_none_without_a_capex_row():
+    t = FakeTicker(income_stmt=annual({"Total Revenue": [200e9, 100e9]}),
+                   cashflow=annual({"Free Cash Flow": [96e9, 60e9], "Operating Cash Flow": [102e9, 64e9]}))
+    assert build_data.fcf_fy(t, "2026-01-31") == (None, None)
+
+
+def test_fcf_fy_is_none_when_that_year_is_absent():
+    t = FakeTicker(income_stmt=annual({"Total Revenue": [200e9, 100e9]}),
+                   cashflow=annual({"Operating Cash Flow": [102e9, 64e9], "Capital Expenditure": [-6e9, -3e9]}))
+    assert build_data.fcf_fy(t, "2024-01-31") == (None, None)
+
+
+def test_fcf_fy_survives_garbage():
+    assert build_data.fcf_fy(FakeTicker(cashflow=None), "2026-01-31") == (None, None)
+    assert build_data.fcf_fy(FakeTicker(cashflow=pd.DataFrame()), "2026-01-31") == (None, None)
 
 
 # ---------- build_prices.tech_from_close ----------

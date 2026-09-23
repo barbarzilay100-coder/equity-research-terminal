@@ -8,8 +8,11 @@ bounds-checks the rest, writes docs/validation-report.md, and exits 1 on hard
 anomalies so CI never commits a broken dataset. Before this, the only guard
 was a row count.
 
-Hard FAIL  -> derived field disagrees with its own inputs, duplicate ticker,
-              non-positive price, shrunken universe (pipeline bug territory).
+Hard FAIL  -> derived field disagrees with its own inputs (including fcf vs
+              ocf + capex, and a fiscal-year figure whose revenue is not the
+              revHist year it is labelled with), duplicate ticker, non-positive
+              price, shrunken universe, or a statement-derived field missing
+              for too many companies at once (pipeline bug territory).
 WARN       -> source-data oddities worth eyeballing (extreme multiples or
               implied upside, vendor net margin vs TTM revenue, missing sector).
 """
@@ -56,11 +59,12 @@ for c in cos:
         exp = c["ev"] / c["fcf"]
         if abs(c["evFcf"] - exp) > max(0.06, abs(exp) * 0.02):
             fails.append(f"{t}: evFcf {c['evFcf']} != {exp:.1f} recomputed from ev/fcf")
+    if c.get("evFcf") is not None and not (c.get("fcf") or 0) > 0:
+        fails.append(f"{t}: evFcf {c['evFcf']} stored with fcf {c.get('fcf')} — the multiple is meaningless unless fcf > 0")
     # --- free cash flow must BE the statement lines it claims to come from.
-    # This is the guard the original bug slipped through: fcf used to be Yahoo's
-    # "levered free cash flow", which is not operating cash flow minus capex, and
-    # nothing here compared it to the cash-flow statement. A ratio check cannot
-    # catch a wrong numerator — only this can.
+    # A ratio check cannot catch a wrong numerator; this can. A vendor "levered
+    # FCF", or an FCF row that is operating cash flow because capex is missing,
+    # both fail it.
     if c.get("fcf") is not None and c.get("ocf") is not None and c.get("capex") is not None:
         exp = c["ocf"] + c["capex"]                      # capex is negative
         if abs(c["fcf"] - exp) > max(0.05, abs(exp) * 0.01):
@@ -81,13 +85,19 @@ for c in cos:
             if abs(exp - c["netMargin"]) > 5:
                 warns.append(f"{t}: netMargin {c['netMargin']}% vs {exp:.1f}% from netIncome/TTM-revenue")
 
-    # --- fiscal-year margin against fiscal-year revenue (same year, hard check)
+    # --- fiscal-year margin: same year as the revHist bar it is labelled with, and
+    # consistent with its own revenue (hard checks)
     rh = c.get("revHist") or []
-    fy_rev = rh[-1].get("r") if rh else None
-    if fy_rev and c.get("fcfFY") is not None and c.get("fcfMarginFY") is not None:
-        exp = c["fcfFY"] / fy_rev * 100
-        if abs(exp - c["fcfMarginFY"]) > TOL_PP:
-            fails.append(f"{t}: fcfMarginFY {c['fcfMarginFY']}% != {exp:.2f}% from fcfFY/FY-revenue")
+    if c.get("revFY") is not None:
+        r = rh[-1].get("r") if rh else None
+        if r is None or abs(c["revFY"] - r) > 0.006:     # revHist rounds to 0.01B
+            fails.append(f"{t}: revFY {c['revFY']}B is not revHist's latest year ({r}B) — FY figures misaligned")
+        elif c.get("fcfFY") is not None and c.get("fcfMarginFY") is not None:
+            exp = c["fcfFY"] / c["revFY"] * 100
+            if abs(exp - c["fcfMarginFY"]) > TOL_PP:
+                fails.append(f"{t}: fcfMarginFY {c['fcfMarginFY']}% != {exp:.2f}% from fcfFY/revFY")
+    elif c.get("fcfMarginFY") is not None:
+        fails.append(f"{t}: fcfMarginFY stored without revFY — not reconcilable")
     # --- bounds
     if c.get("peg") is not None and (c["peg"] < 0 or c["peg"] > 10):
         warns.append(f"{t}: PEG {c['peg']} out of [0, 10]")
@@ -103,6 +113,16 @@ for c in cos:
         warns.append(f"{t}: implied upside {c['impliedUpside']}% outlier — check source multiples")
     if c.get("sector") in (None, "", "—"):
         warns.append(f"{t}: missing sector")
+
+# --- coverage: the statement fetches swallow their errors into None, so a throttled
+# run would otherwise pass with these fields empty everywhere and quietly drop two
+# checklist criteria from every denominator. A few legitimate gaps (no capex row)
+# are normal; a collapse is not.
+MAX_NULL_SHARE = 0.2
+for f in ("fcf", "fcfFY", "revGrowthFY", "revGrowthQ"):
+    n = sum(1 for c in cos if c.get(f) is None)
+    if n > MAX_NULL_SHARE * len(cos):
+        fails.append(f"{f} is null for {n} of {len(cos)} companies (> {MAX_NULL_SHARE:.0%}) — statement fetch likely failed")
 
 status = "FAIL" if fails else "PASS"
 now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
