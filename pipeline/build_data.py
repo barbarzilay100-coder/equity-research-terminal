@@ -120,9 +120,9 @@ def fcf_ttm(t):
 
     Operating cash flow plus capital expenditure (capex is negative on the
     statement), summed here rather than read from a ready-made field:
-    info["freeCashflow"] is Yahoo's "levered free cash flow", which deducts far more
-    than capex, and the statement's own Free Cash Flow row is operating cash flow
-    relabelled whenever the capex row is missing. Revenue is summed over the exact
+    info["freeCashflow"] is Yahoo's "levered free cash flow", an undocumented figure
+    that does not match operating cash flow minus capex, and the statement's own Free
+    Cash Flow row is operating cash flow relabelled whenever the capex row is missing. Revenue is summed over the exact
     quarter dates of the cash flow, so a margin's numerator and denominator cover
     the same twelve months.
 
