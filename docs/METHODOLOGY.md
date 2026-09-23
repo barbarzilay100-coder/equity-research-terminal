@@ -43,7 +43,7 @@ reported, but equals operating cash flow alone when it is not, and the row does 
 So the pipeline builds free cash flow from the two lines, stores them, and every refresh checks
 the result against them.
 
-**How periods are chosen.** Quarterly statement columns are selected by date, never by position:
+**How periods are chosen.** Statement columns are selected by date, never by position:
 
 - Trailing-twelve-month free cash flow sums the four newest consecutive quarters in which both
   operating cash flow and capital expenditure are reported. Quarters are consecutive when
@@ -54,7 +54,9 @@ the result against them.
   53-week fiscal calendars and leap years.
 - Every fiscal-year figure comes from the latest fiscal year in the revenue history, so a
   margin's numerator, its denominator and the "FY ended" date shown beside it are the same year.
-  Fiscal-year growth compares the two most recent fiscal years that report revenue.
+- Fiscal-year growth compares the latest fiscal year with the one before it, only when their
+  year-ends are 350–380 days apart; a missing year or a change of fiscal year-end produces no
+  figure.
 
 **Why there is no trailing-twelve-month growth rate.** Yahoo returns at most five quarters of
 statements. A trailing-twelve-month growth rate compares four quarters with the four before
@@ -69,7 +71,8 @@ those views can cover different twelve-month periods.
 
 **A figure is withheld rather than approximated.** A company with no capex line — typically a
 bank — gets no free cash flow; its operating cash flow is never shown under that name. Three
-quarters, four quarters with a gap, or a missing year-ago quarter produce no figure. A withheld
+quarters, four quarters with a gap, a missing year-ago quarter, or two fiscal years that are
+not a year apart produce no figure. A withheld
 figure shows as a dash, its scorecard criterion is marked N/A, and it drops out of the
 scorecard's denominator (see "Scoring mechanics").
 

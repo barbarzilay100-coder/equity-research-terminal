@@ -50,6 +50,17 @@ def test_rev_history_keeps_last_four_years():
     assert [p["y"] for p in pts] == ["FY22", "FY23", "FY24", "FY25"]
 
 
+@pytest.mark.parametrize("dates, expect_g", [
+    (["2023-09-30", "2024-09-28"], 10.0),     # 52-week year: 364 days apart
+    (["2023-09-30", "2024-10-05"], 10.0),     # 53-week year: 371 days apart
+    (["2022-06-30", "2024-06-30"], None),     # a missing year: two years apart is not YoY
+    (["2024-06-30", "2024-12-31"], None),     # a changed fiscal year-end: a six-month stub
+])
+def test_rev_history_growth_only_between_years_a_year_apart(dates, expect_g):
+    fin = pd.DataFrame([[100e9, 110e9]], index=["Total Revenue"], columns=[pd.Timestamp(d) for d in dates])
+    assert build_data.rev_history(FakeTicker(fin))[-1]["g"] == expect_g
+
+
 def test_rev_history_needs_two_points():
     assert build_data.rev_history(FakeTicker(fin_frame({2025: 5e9}))) is None
 

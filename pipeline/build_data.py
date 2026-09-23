@@ -65,15 +65,17 @@ def rev_history(t):
         row=fin.loc["Total Revenue"].dropna()
         cols=sorted(row.index)  # ascending by date
         pts=[]
-        prev=None
+        prev=prev_c=None
         for c in cols[-4:]:
             r=num(row[c])
             if r is None: continue
             y="FY"+str(getattr(c,"year",c))[2:]
-            g=round((r-prev)/prev*100,1) if prev else None
+            # growth only between year-ends a year apart: a missing year or a changed
+            # fiscal year-end is not year-over-year (52/53-week years stay inside 350-380)
+            g=round((r-prev)/prev*100,1) if (prev and 350<=(c-prev_c).days<=380) else None
             end=getattr(c,"date",lambda:None)()
             pts.append({"y":y,"r":round(r/1e9,2),"g":g,"end":end.isoformat() if end else None})
-            prev=r
+            prev,prev_c=r,c
         return pts if len(pts)>=2 else None
     except Exception:
         return None
