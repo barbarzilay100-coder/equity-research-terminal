@@ -186,16 +186,22 @@ def build(tk):
     ev=to_b(i.get("enterpriseValue"))
     de=num(i.get("debtToEquity"))
     ptavg=num(i.get("targetMeanPrice"))
+    # Derived percentages are computed from the rounded values that are stored and shown,
+    # so they reproduce exactly from the page and in validate_data.py. From the raw inputs,
+    # half a cent of rounding moves a ~$2 stock's upside by ~0.2pp and trips the check.
+    price_r=round(price,2)
+    high_r=round(high,2) if high else None
+    pt_r=round(ptavg,2) if ptavg else None
     d={
       "ticker":tk.replace("-","."),
       "name":i.get("shortName"),
       "sector":i.get("sector") or "—",
       "industry":i.get("industry") or "",
-      "price":round(price,2),
+      "price":price_r,
       "marketCap":to_b(i.get("marketCap")),
       "ev":ev,
-      "high52":round(high,2) if high else None,
-      "distHigh":round((price-high)/high*100,1) if high else None,
+      "high52":high_r,
+      "distHigh":round((price_r-high_r)/high_r*100,1) if high_r else None,
       "revHist":rh,
       "revGrowthFY":rh[-1]["g"] if rh else None,   # latest full fiscal year vs the prior one
       "fyEnd":fy_end,                              # that year's end date — FY figures lag by up to a year
@@ -228,10 +234,10 @@ def build(tk):
       "divYield":num(i.get("dividendYield")),
       "rating":RATING.get((i.get("recommendationKey") or "none"),None),
       "numAnalysts":num(i.get("numberOfAnalystOpinions")),
-      "ptAvg":round(ptavg,2) if ptavg else None,
+      "ptAvg":pt_r,
       "ptLow":num(i.get("targetLowPrice")),
       "ptHigh":num(i.get("targetHighPrice")),
-      "upside":round((ptavg-price)/price*100,1) if ptavg else None,
+      "upside":round((pt_r-price_r)/price_r*100,1) if (pt_r and price_r) else None,
       "summary":(i.get("longBusinessSummary") or "").strip(),
     }
     if tk in WATCHLIST:
@@ -265,8 +271,8 @@ def add_valuations(companies):
                 implied.append(median(fp)*c["price"]/c["forwardPE"]); used.append("Fwd P/E")
             if implied:
                 ip=sum(implied)/len(implied)
-                c["impliedPrice"]=round(ip,2)
-                c["impliedUpside"]=round((ip-c["price"])/c["price"]*100,1)
+                c["impliedPrice"]=round(ip,2)   # upside from the stored price, as in build()
+                c["impliedUpside"]=round((c["impliedPrice"]-c["price"])/c["price"]*100,1)
                 c["impliedFrom"]=" + ".join(used)
 
 def main():

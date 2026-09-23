@@ -8,6 +8,8 @@ Run: python -m pytest -q
 import os
 import sys
 
+import types
+
 import pandas as pd
 import pytest
 
@@ -303,6 +305,57 @@ def test_fcf_fy_is_none_when_that_year_is_absent():
 def test_fcf_fy_survives_garbage():
     assert build_data.fcf_fy(FakeTicker(cashflow=None), "2026-01-31") == (None, None)
     assert build_data.fcf_fy(FakeTicker(cashflow=pd.DataFrame()), "2026-01-31") == (None, None)
+
+
+# ---------- build_data: derived percentages reproduce from stored values ----------
+
+def fake_yf(info):
+    """A yfinance stand-in: info only, no statements, no network."""
+    t = types.SimpleNamespace(info=info, income_stmt=None, cashflow=None,
+                              quarterly_cashflow=None, quarterly_income_stmt=None)
+    return types.SimpleNamespace(Ticker=lambda tk: t)
+
+
+def reproduces(stored, recomputed):
+    # only the final rounding to 0.1 may separate a stored figure from its recomputation
+    return abs(stored - recomputed) <= 0.05 + 1e-9
+
+
+@pytest.mark.parametrize("price, high, target", [
+    (2.194999, 7.123456, 5.8799),   # half a cent of target rounding moved this upside 0.6pp
+    (2.35, 3.194, 5.875),           # LAES on a day the CI validation failed
+    (0.51, 0.515, 0.505),
+    (431.2849, 512.3351, 520.005),
+])
+def test_build_derives_upside_and_distance_from_the_stored_values(monkeypatch, price, high, target):
+    monkeypatch.setattr(build_data, "yf", fake_yf(
+        {"shortName": "X", "currentPrice": price, "fiftyTwoWeekHigh": high, "targetMeanPrice": target}))
+    d = build_data.build("X")
+    assert reproduces(d["upside"], (d["ptAvg"] - d["price"]) / d["price"] * 100)
+    assert reproduces(d["distHigh"], (d["price"] - d["high52"]) / d["high52"] * 100)
+
+
+def test_upside_holds_across_the_price_range_that_failed_ci(monkeypatch):
+    for cents in range(200, 260):
+        for target in (5.8749, 5.875, 5.8751):
+            price = cents / 100 + 0.004999
+            monkeypatch.setattr(build_data, "yf", fake_yf(
+                {"shortName": "X", "currentPrice": price, "fiftyTwoWeekHigh": 7.0, "targetMeanPrice": target}))
+            d = build_data.build("X")
+            assert reproduces(d["upside"], (d["ptAvg"] - d["price"]) / d["price"] * 100), (price, target)
+
+
+def test_add_valuations_implied_upside_reproduces_from_the_stored_implied_price():
+    for low_price in (2.19, 2.35, 2.61):
+        peers = [dict(ticker=f"P{k}", sector="Tech", evEbitda=10.0 + k * 1.37, forwardPE=15.0 + k * 0.93,
+                      ev=50.0 + k, marketCap=40.0 + k, price=20.0 + k, debt=5.0, cash=3.0) for k in range(5)]
+        low = dict(ticker="LOW", sector="Tech", evEbitda=12.3456, forwardPE=17.891, ev=0.613,
+                   marketCap=0.521, price=low_price, debt=0.1, cash=0.02)
+        cos = peers + [low]
+        build_data.add_valuations(cos)
+        for c in cos:
+            assert c.get("impliedPrice") is not None
+            assert reproduces(c["impliedUpside"], (c["impliedPrice"] - c["price"]) / c["price"] * 100), c
 
 
 # ---------- build_prices.tech_from_close ----------
