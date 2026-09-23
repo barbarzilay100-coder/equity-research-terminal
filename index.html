@@ -330,8 +330,8 @@ function buildChecklist(d){
     {name:"Revenue Growth", thr:"Fiscal year or latest quarter, YoY > 10%", val:rgBest, disp:rgDisp, pass:v=>v>10},
     {name:"Rule of 40", thr:"FY growth + FY FCF margin ≥ 40", val:ruleOf40, disp:ruleOf40!=null?ruleOf40.toFixed(0)+` (FY ${pct(d.revGrowthFY)} + ${ppct(d.fcfMarginFY)}${fyTag(d)})`:'N/A', pass:v=>v>=40},
     {name:"FCF Margin", thr:"TTM > 15%", val:d.fcfMargin, disp:ppct(d.fcfMargin), pass:v=>v>15},
-    {name:"Net Margin", thr:"> 15%", val:d.netMargin, disp:ppct(d.netMargin), pass:v=>v>15},
-    {name:"Return on Equity", thr:"> 15%", val:d.roe, disp:ppct(d.roe), pass:v=>v>15},
+    {name:"Net Margin", thr:"TTM > 15%", val:d.netMargin, disp:ppct(d.netMargin), pass:v=>v>15},
+    {name:"Return on Equity", thr:"TTM > 15%", val:d.roe, disp:ppct(d.roe), pass:v=>v>15},
     {name:"Valuation (PEG)", thr:"PEG < 2", val:d.peg, disp:d.peg!=null?d.peg.toFixed(2):'N/A', pass:v=>v<2},
     {name:"Forward Multiple Discount", thr:"Fwd P/E < Trailing P/E", val:rerate, disp:(d.forwardPE!=null&&d.pe!=null)?(x(d.forwardPE)+" vs "+x(d.pe)):'N/A', pass:v=>v>0},
     {name:"Balance Sheet", thr:"Debt / Equity < 1.5", val:d.debtEquity, disp:d.debtEquity!=null?d.debtEquity.toFixed(2):'N/A', pass:v=>v<1.5}
@@ -522,9 +522,9 @@ function financialsHTML(d,sc){
     <h2>Profitability</h2>
     <div class="grid4">
       <div class="kpi"><div class="l">Net Margin (TTM)</div><div class="v">${ppct(d.netMargin)}</div></div>
-      <div class="kpi"><div class="l">Gross Margin</div><div class="v">${ppct(d.grossMargin)}</div></div>
-      <div class="kpi"><div class="l">EBITDA Margin</div><div class="v">${ppct(d.ebitdaMargin)}</div></div>
-      <div class="kpi"><div class="l">Diluted EPS</div><div class="v">${fmtUSD(d.eps)}</div></div>
+      <div class="kpi"><div class="l">Gross Margin (TTM)</div><div class="v">${ppct(d.grossMargin)}</div></div>
+      <div class="kpi"><div class="l">EBITDA Margin (TTM)</div><div class="v">${ppct(d.ebitdaMargin)}</div></div>
+      <div class="kpi"><div class="l">Diluted EPS (TTM)</div><div class="v">${fmtUSD(d.eps)}</div></div>
     </div>
   </div>
   <div class="section">
@@ -534,7 +534,7 @@ function financialsHTML(d,sc){
       <div class="kpi"><div class="l">Cash</div><div class="v">${fmtB(d.cash)}</div></div>
       <div class="kpi"><div class="l">Total Debt</div><div class="v">${fmtB(d.debt)}</div></div>
       <div class="kpi"><div class="l">Debt / Equity</div><div class="v">${d.debtEquity!=null?d.debtEquity.toFixed(2):'—'}</div></div>
-      <div class="kpi"><div class="l">Return on Equity</div><div class="v">${ppct(d.roe)}</div></div>
+      <div class="kpi"><div class="l">Return on Equity (TTM)</div><div class="v">${ppct(d.roe)}</div></div>
       <div class="kpi"><div class="l">Current Ratio</div><div class="v">${d.currentRatio!=null?d.currentRatio.toFixed(2):'—'}</div></div>
       <div class="kpi"><div class="l">Net Income (TTM)</div><div class="v">${fmtB(d.netIncome)}</div></div>
       <div class="kpi"><div class="l">Rule of 40 (FY)</div><div class="v">${sc.ruleOf40!=null?sc.ruleOf40.toFixed(0):'—'}</div></div>
@@ -961,8 +961,8 @@ const CMP_ROWS=[
   {k:'revGrowthQ',label:'Revenue Growth · Latest Q YoY',fmt:pct,dir:1},
   {k:'netMargin',label:'Net Margin (TTM)',fmt:ppct,dir:1},
   {k:'fcfMargin',label:'FCF Margin (TTM)',fmt:ppct,dir:1},
-  {k:'grossMargin',label:'Gross Margin',fmt:ppct,dir:1},
-  {k:'roe',label:'Return on Equity',fmt:ppct,dir:1},
+  {k:'grossMargin',label:'Gross Margin (TTM)',fmt:ppct,dir:1},
+  {k:'roe',label:'Return on Equity (TTM)',fmt:ppct,dir:1},
   {k:'pe',label:'P/E (TTM)',fmt:x,dir:-1},
   {k:'forwardPE',label:'Forward P/E',fmt:x,dir:-1},
   {k:'peg',label:'PEG Ratio',fmt:num2,dir:-1},
