@@ -9,6 +9,7 @@ import os
 import sys
 
 import pandas as pd
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "pipeline"))
 
@@ -88,6 +89,16 @@ def test_rev_growth_q_skips_an_empty_placeholder_quarter():
     assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=inc)) == 300.0
 
 
+@pytest.mark.parametrize("newest, year_ago", [
+    ("2026-06-27", "2025-06-28"),   # 52-week year: 364 days
+    ("2028-02-29", "2027-02-28"),   # leap-year February quarter end: 366 days
+    ("2026-07-04", "2025-06-28"),   # 53-week year: 371 days
+])
+def test_rev_growth_q_tolerates_fiscal_calendar_offsets(newest, year_ago):
+    inc = q_frame({"Total Revenue": [40e9, 10e9]}, [pd.Timestamp(newest), pd.Timestamp(year_ago)])
+    assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=inc)) == 300.0
+
+
 def test_rev_growth_q_is_none_without_the_year_ago_quarter():
     short = q_frame({"Total Revenue": [40e9, 30e9, 20e9, 10e9]})
     assert build_data.rev_growth_q(FakeTicker(quarterly_income_stmt=short)) is None
@@ -147,12 +158,41 @@ def test_fcf_ttm_is_none_when_capex_is_missing_inside_the_year():
     assert build_data.fcf_ttm(t) == (None, None, None, None)
 
 
-def test_fcf_ttm_refuses_four_quarters_with_a_hole_in_them():
-    # 2026-01-31 never reported: the four newest dates span fifteen months, not a year
-    holed = [QTRS[0], QTRS[1], QTRS[3], QTRS[4], QTRS[5]]
+@pytest.mark.parametrize("missing", [1, 2, 3])   # hole at the newest, middle and oldest pair of the four
+def test_fcf_ttm_refuses_four_quarters_with_a_hole_in_them(missing):
+    # one quarter never reported: the four newest dates span fifteen months, not a year
+    holed = [q for k, q in enumerate(QTRS) if k != missing]
     t = cash_and_revenue([44e9, 33e9, 22e9, 11e9, 10e9], [-4e9, -3e9, -2e9, -1e9, -1e9],
                          [100e9, 90e9, 80e9, 70e9, 60e9], cf_dates=holed, rev_dates=holed)
     assert build_data.fcf_ttm(t) == (None, None, None, None)
+
+
+def test_fcf_ttm_needs_four_quarters_not_three():
+    t = cash_and_revenue([44e9, 33e9, 22e9], [-4e9, -3e9, -2e9], [100e9, 90e9, 80e9])
+    assert build_data.fcf_ttm(t) == (None, None, None, None)
+
+
+def test_fcf_ttm_refuses_a_stub_period_between_quarters():
+    # a fiscal-year change leaves a one-month stub: 31 days apart is not the next quarter
+    stub = [pd.Timestamp(d) for d in ("2026-07-31", "2026-06-30", "2026-03-31", "2025-12-31", "2025-09-30")]
+    t = cash_and_revenue([44e9, 5e9, 33e9, 22e9, 11e9], [-4e9, -1e9, -3e9, -2e9, -1e9],
+                         [100e9, 20e9, 90e9, 80e9, 70e9], cf_dates=stub, rev_dates=stub)
+    assert build_data.fcf_ttm(t) == (None, None, None, None)
+
+
+def test_fcf_ttm_skips_a_newest_quarter_with_cash_flow_but_no_capex():
+    # operating cash flow already reported, capex not: fall back to the four complete quarters
+    t = cash_and_revenue([99e9, 44e9, 33e9, 22e9, 11e9], [NAN, -4e9, -3e9, -2e9, -1e9],
+                         [999e9, 100e9, 90e9, 80e9, 70e9])
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
+
+
+def test_fcf_ttm_pairs_revenue_by_date_when_the_frames_hold_different_quarters():
+    # the income statement carries two older quarters the cash-flow frame lacks, so a
+    # position-based lookup would sum the wrong four quarters
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9],
+                         [100e9, 90e9, 80e9, 70e9, 500e9, 600e9], cf_dates=QTRS[:4], rev_dates=QTRS)
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
 
 
 def test_fcf_ttm_accepts_a_sixteen_week_fiscal_quarter():
@@ -164,8 +204,27 @@ def test_fcf_ttm_accepts_a_sixteen_week_fiscal_quarter():
     assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
 
 
+def test_fcf_ttm_accepts_a_seventeen_week_fiscal_quarter():
+    # the 53-week year of a 12/12/12/16 calendar ends on a 17-week (119-day) quarter
+    weeks = [pd.Timestamp("2026-05-10"), pd.Timestamp("2026-02-15"), pd.Timestamp("2025-11-23"),
+             pd.Timestamp("2025-07-27")]
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, 90e9, 80e9, 70e9],
+                         cf_dates=weeks, rev_dates=weeks)
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
+
+
 def test_fcf_ttm_keeps_fcf_when_revenue_is_missing_for_one_of_its_quarters():
     t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, NAN, 80e9, 70e9])
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, None)
+
+
+def test_fcf_ttm_does_not_double_count_a_duplicated_revenue_quarter():
+    # the same quarter date twice in the income statement: summing it would inflate the
+    # margin's denominator, so revenue is withheld instead
+    cf = q_frame({"Operating Cash Flow": [44e9, 33e9, 22e9, 11e9], "Capital Expenditure": [-4e9, -3e9, -2e9, -1e9]},
+                 QTRS[:4])
+    inc = pd.DataFrame([[100e9, 90e9, 80e9, 70e9, 90e9]], index=["Total Revenue"], columns=QTRS[:4] + [QTRS[1]])
+    t = FakeTicker(quarterly_cashflow=cf, quarterly_income_stmt=inc)
     assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, None)
 
 
@@ -202,10 +261,26 @@ def test_fcf_fy_reads_the_year_revhist_is_labelled_with():
     assert build_data.fcf_fy(t, fy_end) == (15e9, 100e9)
 
 
-def test_fcf_fy_is_none_without_a_capex_row():
+def test_fcf_fy_has_no_fcf_but_keeps_revenue_without_a_capex_row():
     t = FakeTicker(income_stmt=annual({"Total Revenue": [200e9, 100e9]}),
                    cashflow=annual({"Free Cash Flow": [96e9, 60e9], "Operating Cash Flow": [102e9, 64e9]}))
-    assert build_data.fcf_fy(t, "2026-01-31") == (None, None)
+    assert build_data.fcf_fy(t, "2026-01-31") == (None, 200e9)
+
+
+def test_fcf_fy_has_no_fcf_when_capex_is_empty_that_year():
+    # the capex row exists but is blank for the labelled year: never publish OCF as FCF
+    t = FakeTicker(income_stmt=annual({"Total Revenue": [200e9, 100e9]}),
+                   cashflow=annual({"Operating Cash Flow": [102e9, 64e9], "Capital Expenditure": [NAN, -3e9]}))
+    assert build_data.fcf_fy(t, "2026-01-31") == (None, 200e9)
+
+
+def test_fcf_fy_pairs_cash_flow_by_date_when_the_frames_hold_different_years():
+    # the cash-flow frame lacks FY26, so FY25 sits at a different position in each frame
+    years = FY + [pd.Timestamp("2024-01-31")]
+    t = FakeTicker(income_stmt=pd.DataFrame([[300e9, 200e9, 100e9]], index=["Total Revenue"], columns=years),
+                   cashflow=pd.DataFrame([[50e9, 20e9], [-10e9, -5e9]],
+                                         index=["Operating Cash Flow", "Capital Expenditure"], columns=years[1:]))
+    assert build_data.fcf_fy(t, "2025-01-31") == (40e9, 200e9)
 
 
 def test_fcf_fy_is_none_when_that_year_is_absent():

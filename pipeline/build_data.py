@@ -133,15 +133,14 @@ def fcf_ttm(t):
         cf = t.quarterly_cashflow
         cols = ttm_window(cf, ["Operating Cash Flow", "Capital Expenditure"])
         if cols is None: return None, None, None, None
-        ocf = sum(num(cf.loc["Operating Cash Flow", c]) for c in cols)
-        capex = sum(num(cf.loc["Capital Expenditure", c]) for c in cols)
+        ocf = float(cf.loc["Operating Cash Flow", cols].sum())      # ttm_window: no gaps
+        capex = float(cf.loc["Capital Expenditure", cols].sum())
     except Exception:
         return None, None, None, None
     rev = None
     try:
-        inc = t.quarterly_income_stmt
-        revs = [num(inc.loc["Total Revenue", c]) if c in inc.columns else None for c in cols]
-        if all(v is not None for v in revs): rev = sum(revs)
+        s = t.quarterly_income_stmt.loc["Total Revenue", cols]     # KeyError if a date is absent
+        if len(s) == len(cols) and s.notna().all(): rev = float(s.sum())  # len: no duplicate labels
     except Exception:
         pass
     return ocf + capex, ocf, capex, rev
@@ -152,17 +151,22 @@ def fcf_fy(t, fy_end):
     fy_end comes from revHist, so the margin's numerator, its denominator and the
     "FY ended" date shown beside it are the same year by construction; the newest
     cash-flow column is not assumed to be that year. Same rule as fcf_ttm:
-    operating cash flow plus capex, None when either line is missing.
-    Returns (fcf, revenue) in dollars."""
+    operating cash flow plus capex, None when either line is missing that year.
+    Returns (fcf, revenue) in dollars; revenue comes back even without fcf, so it
+    stays reconcilable against revHist for every company."""
     try:
-        cf, inc = t.cashflow, t.income_stmt
-        col = next(c for c in cf.columns if c.date().isoformat() == fy_end)
-        ocf = num(cf.loc["Operating Cash Flow", col])
-        capex = num(cf.loc["Capital Expenditure", col])
-        if ocf is None or capex is None: return None, None
-        return ocf + capex, num(inc.loc["Total Revenue", col])
+        inc = t.income_stmt
+        col = next(c for c in inc.columns if c.date().isoformat() == fy_end)
+        rev = num(inc.loc["Total Revenue", col])
     except Exception:
         return None, None
+    try:
+        ocf = num(t.cashflow.loc["Operating Cash Flow", col])
+        capex = num(t.cashflow.loc["Capital Expenditure", col])
+    except Exception:
+        return None, rev
+    if ocf is None or capex is None: return None, rev
+    return ocf + capex, rev
 
 def build(tk):
     t=yf.Ticker(tk)
@@ -218,7 +222,7 @@ def build(tk):
       "forwardPE":num(i.get("forwardPE")),
       "peg":num(i.get("trailingPegRatio")),
       "evEbitda":num(i.get("enterpriseToEbitda")),
-      "evFcf":round(ev/fcf,1) if (ev and fcf and fcf>0) else None,   # a negative multiple means nothing
+      "evFcf":round(ev/fcf,1) if ((ev or 0)>0 and (fcf or 0)>0) else None,   # a negative multiple means nothing
       "divYield":num(i.get("dividendYield")),
       "rating":RATING.get((i.get("recommendationKey") or "none"),None),
       "numAnalysts":num(i.get("numberOfAnalystOpinions")),

@@ -59,8 +59,8 @@ for c in cos:
         exp = c["ev"] / c["fcf"]
         if abs(c["evFcf"] - exp) > max(0.06, abs(exp) * 0.02):
             fails.append(f"{t}: evFcf {c['evFcf']} != {exp:.1f} recomputed from ev/fcf")
-    if c.get("evFcf") is not None and not (c.get("fcf") or 0) > 0:
-        fails.append(f"{t}: evFcf {c['evFcf']} stored with fcf {c.get('fcf')} — the multiple is meaningless unless fcf > 0")
+    if c.get("evFcf") is not None and not ((c.get("fcf") or 0) > 0 and (c.get("ev") or 0) > 0):
+        fails.append(f"{t}: evFcf {c['evFcf']} stored with ev {c.get('ev')} / fcf {c.get('fcf')} — meaningless unless both > 0")
     # --- free cash flow must BE the statement lines it claims to come from.
     # A ratio check cannot catch a wrong numerator; this can. A vendor "levered
     # FCF", or an FCF row that is operating cash flow because capex is missing,
@@ -80,10 +80,13 @@ for c in cos:
             exp = c["fcf"] / c["revTTM"] * 100
             if abs(exp - c["fcfMargin"]) > TOL_PP:
                 fails.append(f"{t}: fcfMargin {c['fcfMargin']}% != {exp:.2f}% from fcf/TTM-revenue")
+        # netMargin and netIncome are vendor fields; revTTM is statement revenue. A gap
+        # means the vendor computes its margin on a different revenue base, or its net
+        # income disagrees with the statements.
         if c.get("netIncome") is not None and c.get("netMargin") is not None:
             exp = c["netIncome"] / c["revTTM"] * 100
             if abs(exp - c["netMargin"]) > 5:
-                warns.append(f"{t}: netMargin {c['netMargin']}% vs {exp:.1f}% from netIncome/TTM-revenue")
+                warns.append(f"{t}: vendor netMargin {c['netMargin']}% vs {exp:.1f}% = vendor netIncome / statement TTM revenue")
 
     # --- fiscal-year margin: same year as the revHist bar it is labelled with, and
     # consistent with its own revenue (hard checks)
