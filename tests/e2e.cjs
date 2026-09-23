@@ -93,6 +93,11 @@ DB.companies.forEach(c => {
 });
 check('scorecard discriminates (every band non-empty)', Object.values(bands).every(n => n > 0));
 
+// schema: the scorecard reads the statement-derived fields. data.js in the old schema
+// (no revGrowthFY / fcfMarginFY) still renders, but blanks two criteria for every company.
+const cov = k => DB.companies.filter(c => c[k] != null).length / DB.companies.length;
+check('data carries the statement-derived growth and FCF fields', cov('revGrowthFY') > 0.8 && cov('fcfMarginFY') > 0.8);
+
 // compare
 window.showView('compare');
 window.renderCompareTable();
