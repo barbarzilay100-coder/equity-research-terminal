@@ -104,12 +104,14 @@ def ttm_window(q, rows):
 
     Skips the empty placeholder column Yahoo adds for a quarter it has not filled
     yet. Refuses a window with a hole in it: four quarters spread over fifteen
-    months are not a year."""
+    months are not a year. Quarters may run 12 to 16 weeks (a 12/12/12/16-week
+    fiscal calendar, or a 53-week year), so consecutive means 75-125 days apart;
+    a missing quarter leaves a gap of about 180."""
     if q is None or q.empty or any(r not in q.index for r in rows): return None
     cols = [c for c in sorted(q.columns, reverse=True)
             if all(num(q.loc[r, c]) is not None for r in rows)][:4]
     if len(cols) < 4: return None
-    if any(not 80 <= (a - b).days <= 100 for a, b in zip(cols, cols[1:])): return None
+    if any(not 75 <= (a - b).days <= 125 for a, b in zip(cols, cols[1:])): return None
     return cols
 
 def fcf_ttm(t):

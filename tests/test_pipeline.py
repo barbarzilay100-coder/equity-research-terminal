@@ -155,6 +155,15 @@ def test_fcf_ttm_refuses_four_quarters_with_a_hole_in_them():
     assert build_data.fcf_ttm(t) == (None, None, None, None)
 
 
+def test_fcf_ttm_accepts_a_sixteen_week_fiscal_quarter():
+    # a 12/12/12/16-week fiscal calendar: 84-, 84- and 112-day gaps are consecutive quarters
+    weeks = [pd.Timestamp("2026-05-10"), pd.Timestamp("2026-02-15"), pd.Timestamp("2025-11-23"),
+             pd.Timestamp("2025-08-03")]
+    t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, 90e9, 80e9, 70e9],
+                         cf_dates=weeks, rev_dates=weeks)
+    assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, 340e9)
+
+
 def test_fcf_ttm_keeps_fcf_when_revenue_is_missing_for_one_of_its_quarters():
     t = cash_and_revenue([44e9, 33e9, 22e9, 11e9], [-4e9, -3e9, -2e9, -1e9], [100e9, NAN, 80e9, 70e9])
     assert build_data.fcf_ttm(t) == (100e9, 110e9, -10e9, None)
