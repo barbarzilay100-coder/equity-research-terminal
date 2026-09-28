@@ -1,14 +1,14 @@
 # Data validation report
 
-Generated 2026-09-25 11:32 UTC · snapshot **Sep 25, 2026** · 126 companies
+Generated 2026-09-28 13:22 UTC · snapshot **Sep 28, 2026** · 126 companies
 Result: **PASS** — 0 hard failure(s), 13 warning(s)
 
 ## Warnings (source-data oddities, non-blocking)
 
-- CRWD: implied upside -91.2% outlier — check source multiples
-- DDOG: implied upside -82.8% outlier — check source multiples
-- NET: implied upside -88.9% outlier — check source multiples
-- FIS: implied upside 439.9% outlier — check source multiples
+- CRWD: implied upside -90.8% outlier — check source multiples
+- DDOG: implied upside -83.3% outlier — check source multiples
+- NET: implied upside -88.4% outlier — check source multiples
+- FIS: implied upside 444.0% outlier — check source multiples
 - GPN: vendor netMargin -9.15% vs 4.8% = vendor netIncome / statement TTM revenue
 - NU: vendor netMargin 42.73% vs 27.4% = vendor netIncome / statement TTM revenue
 - ICE: vendor netMargin 38.25% vs 30.1% = vendor netIncome / statement TTM revenue
