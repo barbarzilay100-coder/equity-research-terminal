@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Micron (MU) Research Note</title>
+<meta name="description" content="Equity research note on Micron Technology (MU): record AI-driven memory profits, long-term take-or-pay contracts, and what the share price assumes. Rating: Hold.">
+<meta property="og:title" content="Micron (MU) Research Note">
+<meta property="og:description" content="Record AI-driven memory profits, long-term contracts, and what the price assumes. Rating: Hold. By Bar Barzilay.">
+<meta property="og:type" content="article">
+<meta name="author" content="Bar Barzilay">
+<style>html{-webkit-text-size-adjust:100%}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column with a data strip up top; memory-module motifs (PCB green, gold contacts) carry the subject. */
+:root{
+  --bg:#F4F7F5; --surface:#FFFFFF; --ink:#111915; --ink-2:#47544E; --muted:#6F7C76; --rule:#DAE2DE;
+  --accent:#17614D; --accent-soft:#E2EEE9; --gold:#8A6416; --gold-fill:#C9A048;
+  --bar:#B3C0BA; --chip:#1A2420; --chip-ink:#EEF4F1; --bad:#A3412D; --bad-soft:#F6E6E1;
+  --font-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1311; --surface:#141C19; --ink:#E5ECE8; --ink-2:#A8B4AE; --muted:#7F8B86; --rule:#26312C;
+    --accent:#52B596; --accent-soft:#16302A; --gold:#D6AA52; --gold-fill:#B98F3A;
+    --bar:#43524C; --chip:#0A100E; --chip-ink:#E5ECE8; --bad:#E0806A; --bad-soft:#3A1F19;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1311; --surface:#141C19; --ink:#E5ECE8; --ink-2:#A8B4AE; --muted:#7F8B86; --rule:#26312C;
+  --accent:#52B596; --accent-soft:#16302A; --gold:#D6AA52; --gold-fill:#B98F3A;
+  --bar:#43524C; --chip:#0A100E; --chip-ink:#E5ECE8; --bad:#E0806A; --bad-soft:#3A1F19;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:780px;margin:0 auto;padding-inline:20px;padding-block:40px 64px;display:flex;flex-direction:column;gap:56px}
+a{color:var(--accent);text-underline-offset:3px}
+a:focus-visible,[tabindex]:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+h1,h2,h3{font-family:var(--font-display);font-stretch:80%;line-height:1.1;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.4rem,7vw,3.6rem);font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.75rem;font-weight:700}
+h3{font-size:1.1rem;font-weight:700;font-stretch:90%}
+p{margin:0;max-width:65ch}
+.eyebrow,.label{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+section{display:flex;flex-direction:column;gap:20px}
+.stack{display:flex;flex-direction:column;gap:14px}
+
+/* Header */
+header{display:flex;flex-direction:column;gap:18px}
+.tickerline{font-family:var(--font-mono);font-size:.85rem;color:var(--ink-2)}
+.dek{font-size:1.15rem;color:var(--ink-2);max-width:58ch}
+.strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--rule);border-radius:6px;background:var(--surface);overflow:hidden}
+.strip>div{padding:12px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+.strip>div:nth-child(3n){border-right:0}
+.strip>div:nth-last-child(-n+3){border-bottom:0}
+.strip .v{font-family:var(--font-mono);font-size:1.05rem;font-weight:500;font-variant-numeric:tabular-nums}
+.strip .s{font-size:.75rem;color:var(--muted)}
+.rating{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-stretch:85%;font-weight:800;font-size:1.25rem;letter-spacing:.04em;color:var(--gold)}
+.rating::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--gold-fill)}
+
+/* Bottom line */
+.bottom{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:22px 22px 24px}
+.bottom ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:10px;max-width:65ch}
+.bottom li::marker{color:var(--accent)}
+
+/* Memory types */
+.types{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.type{border-top:2px solid var(--ink);padding-top:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.type .big{font-family:var(--font-mono);font-size:1.5rem;font-weight:500;font-variant-numeric:tabular-nums}
+.type p{font-size:.95rem;color:var(--ink-2)}
+
+/* Module bar (revenue mix drawn as a memory module) */
+.module{background:var(--accent);border-radius:6px 6px 3px 3px;padding:10px 10px 0;display:flex;flex-direction:column;gap:10px}
+.module .chips{display:flex;gap:6px;height:58px}
+.module .chip{background:var(--chip);color:var(--chip-ink);border-radius:2px;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:.85rem;min-width:0}
+.module .fingers{height:16px;margin-inline:-10px;background:repeating-linear-gradient(90deg,var(--gold-fill) 0 6px,transparent 6px 9px);position:relative}
+.module .fingers::after{content:"";position:absolute;left:58%;top:0;width:12px;height:100%;background:var(--bg)}
+.mixlegend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.mixlegend div{display:flex;flex-direction:column;gap:2px;min-width:0;font-size:.85rem}
+.mixlegend b{font-family:var(--font-mono);font-weight:500;font-size:1rem}
+.mixlegend span{color:var(--muted);font-size:.8rem}
+
+/* KPI tiles */
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.tile{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .v{font-family:var(--font-mono);font-size:1.45rem;font-weight:500;font-variant-numeric:tabular-nums}
+.tile .s{font-size:.8rem;color:var(--muted)}
+
+/* Charts */
+.chart{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:16px 14px 10px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.caption{font-size:.9rem;color:var(--ink-2)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-family:var(--font-mono);font-size:.78rem;line-height:1.5;padding:8px 10px;border-radius:4px;white-space:nowrap;z-index:2}
+details{font-size:.9rem}
+summary{cursor:pointer;color:var(--accent);font-weight:500}
+.tablewrap{overflow-x:auto;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.n,th.n{text-align:right;font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+/* SCA facts */
+.facts{display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);border-top:1px solid var(--rule)}
+.facts dt,.facts dd{margin:0;padding:12px 0;border-bottom:1px solid var(--rule)}
+.facts dt{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);padding-right:16px;letter-spacing:.03em}
+.facts dd{font-size:.95rem}
+blockquote{margin:0;padding-left:16px;border-left:2px solid var(--gold-fill);color:var(--ink-2);font-style:italic;max-width:62ch}
+
+/* Locked-in bar */
+.lock{display:flex;flex-direction:column;gap:8px}
+.lock .track{height:34px;border-radius:4px;background:var(--bar);display:flex;overflow:hidden}
+.lock .fill{width:13.55%;background:var(--accent);border-right:2px solid var(--surface)}
+.lock .ends{display:flex;justify-content:space-between;gap:12px;font-size:.85rem}
+.lock .ends b{font-family:var(--font-mono);font-weight:500}
+
+/* Timeline */
+.timeline{display:flex;flex-direction:column;border-left:2px solid var(--rule);margin-left:4px}
+.timeline .ev{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:8px 0 8px 16px;position:relative}
+.timeline .ev::before{content:"";position:absolute;left:-6px;top:15px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.timeline .when{font-family:var(--font-mono);font-size:.82rem;color:var(--accent);font-weight:500;padding-top:2px}
+
+/* EPS bars */
+.eps{display:flex;flex-direction:column;gap:12px}
+.eps .row{display:grid;grid-template-columns:minmax(0,210px) minmax(0,1fr);gap:14px;align-items:center}
+.eps .name{font-size:.88rem;color:var(--ink-2)}
+.eps .track{position:relative;height:22px}
+.eps .bar{position:absolute;top:0;height:100%;background:var(--bar);border-radius:0 4px 4px 0}
+.eps .bar.hl{background:var(--accent);border-radius:4px}
+.eps .val{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--font-mono);font-size:.82rem;white-space:nowrap;color:var(--ink);padding-left:8px}
+.eps .row.key .name{color:var(--ink);font-weight:600}
+.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px;max-width:65ch}
+.steps li::marker{font-family:var(--font-mono);color:var(--accent)}
+
+/* Verdict */
+.verdict-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.verdict-head .rating{font-size:2rem}
+.triggers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.trig{border-radius:6px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.trig.up{background:var(--accent-soft)}
+.trig.down{background:var(--bad-soft)}
+.trig h3{display:flex;align-items:center;gap:8px}
+.trig.up h3{color:var(--accent)}
+.trig.down h3{color:var(--bad)}
+.trig ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px;font-size:.93rem}
+
+footer{border-top:1px solid var(--rule);padding-top:24px;display:flex;flex-direction:column;gap:16px;font-size:.88rem;color:var(--ink-2)}
+footer ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.by{display:flex;flex-direction:column;gap:4px}
+.by strong{font-family:var(--font-display);font-stretch:85%;font-size:1.15rem;color:var(--ink)}
+.links{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.email{font-family:var(--font-mono);user-select:all}
+
+@media (max-width:640px){
+  .wrap{gap:44px;padding-block:28px 48px}
+  .strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .strip>div{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .strip>div:nth-child(2n){border-right:0}
+  .strip>div:nth-last-child(-n+2){border-bottom:0}
+  .tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .types,.triggers{grid-template-columns:minmax(0,1fr)}
+  .mixlegend{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .facts{grid-template-columns:minmax(0,1fr)}
+  .facts dt{border-bottom:0;padding-bottom:0}
+  .facts dd{padding-top:4px}
+  .eps .row{grid-template-columns:minmax(0,1fr);gap:4px}
+  .timeline .ev{grid-template-columns:minmax(0,1fr);gap:2px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Equity research note · October 2, 2026</div>
+  <h1>Micron Technology</h1>
+  <div class="tickerline">NASDAQ: MU · Memory chips · Fiscal year ends late Aug / early Sep</div>
+  <p class="dek">Record profits from an AI-driven memory shortage. New long-term contracts make part of those profits more durable. The share price already assumes most of the rest.</p>
+  <div class="strip" role="list">
+    <div role="listitem"><span class="label">Rating</span><span class="rating">HOLD</span></div>
+    <div role="listitem"><span class="label">Share price</span><span class="v">$1,097.39</span><span class="s">Close, Oct 1, 2026</span></div>
+    <div role="listitem"><span class="label">Market cap</span><span class="v">~$1.26tn</span><span class="s">1.15bn diluted shares</span></div>
+    <div role="listitem"><span class="label">P/E, FY2026</span><span class="v">14.5x</span><span class="s">Non-GAAP EPS $75.52</span></div>
+    <div role="listitem"><span class="label">P/E, next-quarter pace</span><span class="v">7.2x</span><span class="s">FQ1-27 guide $38.15 × 4</span></div>
+    <div role="listitem"><span class="label">Net cash</span><span class="v">$68bn</span><span class="s">$73.5bn cash less $5.2bn debt</span></div>
+  </div>
+</header>
+
+<section class="bottom" aria-labelledby="bl">
+  <h2 id="bl">The bottom line</h2>
+  <ul>
+    <li>Micron is in the strongest position in its history. FY2026 revenue was $133.2bn, 3.6 times FY2025, and gross margin reached 86.8% in the fourth quarter.</li>
+    <li>What is new in this cycle is 26 multi-year take-or-pay contracts, backed by $32bn of customer commitments. They make part of today's profits harder to lose.</li>
+    <li>At $1,097, the market already assumes Micron keeps earning about $53–79 per share a year after the boom. That is close to the FY2026 record and 5–7 times the last cycle's peak, while the contracts guarantee only about 14% of the current revenue pace.</li>
+    <li>Hold. I would add on proof that the contracts hold as new supply arrives in 2027, and sell on signs that memory prices are turning.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="what">
+  <h2 id="what">What Micron makes</h2>
+  <p>Micron is one of three companies, with Samsung and SK hynix, that make almost all of the world's DRAM. It sells two kinds of memory.</p>
+  <div class="types">
+    <div class="type">
+      <span class="label">DRAM · 73% of FQ4 revenue</span>
+      <span class="big">$39.8bn</span>
+      <p>The fast working memory every processor needs. Includes HBM, stacks of DRAM placed right next to AI accelerators.</p>
+    </div>
+    <div class="type">
+      <span class="label">NAND · 26% of FQ4 revenue</span>
+      <span class="big">$14.1bn</span>
+      <p>Storage that keeps data with the power off, sold mostly as SSDs. Data center SSDs were over two-thirds of NAND revenue.</p>
+    </div>
+  </div>
+  <div class="stack">
+    <span class="label">Revenue by business unit, FQ4 FY2026 · $54.2bn</span>
+    <div class="module" role="img" aria-label="Revenue mix: Cloud Memory 30%, Core Data Center 33%, Mobile and Client 24%, Automotive and Embedded 13%">
+      <div class="chips">
+        <div class="chip" style="flex:16283">30%</div>
+        <div class="chip" style="flex:18002">33%</div>
+        <div class="chip" style="flex:13114">24%</div>
+        <div class="chip" style="flex:6824">13%</div>
+      </div>
+      <div class="fingers"></div>
+    </div>
+    <div class="mixlegend">
+      <div><b>30% · $16.3bn</b>Cloud Memory<span>Largest cloud companies, incl. HBM</span></div>
+      <div><b>33% · $18.0bn</b>Core Data Center<span>Server makers and other data centers</span></div>
+      <div><b>24% · $13.1bn</b>Mobile and Client<span>Phones and PCs</span></div>
+      <div><b>13% · $6.8bn</b>Automotive and Embedded<span>Cars, industrial, consumer</span></div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="nums">
+  <h2 id="nums">The numbers</h2>
+  <span class="label">FQ4 FY2026, quarter ended Sep 3, 2026, against the same quarter a year earlier</span>
+  <div class="tiles">
+    <div class="tile"><span class="label">Revenue</span><span class="v">$54.2bn</span><span class="s">from $11.3bn</span></div>
+    <div class="tile"><span class="label">Gross margin</span><span class="v">86.8%</span><span class="s">from 44.7%</span></div>
+    <div class="tile"><span class="label">EPS, non-GAAP</span><span class="v">$33.42</span><span class="s">from $3.03</span></div>
+    <div class="tile"><span class="label">Free cash flow</span><span class="v">$33.2bn</span><span class="s">from $0.8bn, adjusted</span></div>
+  </div>
+  <div class="chart" id="cycle">
+    <svg id="cycleSvg" role="img" aria-label="Revenue and gross margin, FY2018 to FY2026"></svg>
+    <div class="tip" id="cycleTip" hidden></div>
+  </div>
+  <p class="caption">Memory is a boom-and-bust business. In FY2023 revenue halved and gross margin turned negative. FY2026 is far above any earlier peak. Hover a year for its figures.</p>
+  <details>
+    <summary>View the figures</summary>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Fiscal year</th><th class="n">Revenue</th><th class="n">Gross margin</th><th class="n">Diluted EPS (GAAP)</th></tr></thead>
+        <tbody id="cycleTable"></tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<section aria-labelledby="diff">
+  <h2 id="diff">Is this time different?</h2>
+  <p>A year ago, Micron's annual report described its customers this way:</p>
+  <blockquote>“Due to volatile industry conditions, our customers are generally reluctant to enter into long-term, fixed-price purchase contracts.” <span class="mono" style="font-style:normal;font-size:.8rem">Form 10-K, FY2025</span></blockquote>
+  <p>That has changed. Micron has now signed 26 Strategic Customer Agreements (SCAs).</p>
+  <dl class="facts">
+    <dt>Type</dt><dd>Take-or-pay. The customer pays for a minimum volume even if it buys less.</dd>
+    <dt>Term</dt><dd>Through 2030. Two have been extended into 2031.</dd>
+    <dt>Pricing</dt><dd>Three-quarters of the expected revenue has a set pricing framework, mostly bands with a floor and a ceiling. The rest is priced to market.</dd>
+    <dt>Customer commitments</dt><dd>$32bn, mostly cash deposits. Micron received $12.7bn of deposits in FY2026.</dd>
+    <dt>Remaining performance obligations</dt><dd>About $150bn. This is the committed minimum: minimum volumes at minimum prices.</dd>
+  </dl>
+  <div class="stack">
+    <h3>How much is actually locked in</h3>
+    <div class="lock" role="img" aria-label="Contracted minimum of about 33 billion dollars a year is about 14 percent of a 246 billion dollar annual revenue pace">
+      <div class="track"><div class="fill"></div></div>
+      <div class="ends"><span><b>~$33bn / yr</b> contracted minimum</span><span><b>$246bn / yr</b> revenue pace</span></div>
+    </div>
+    <p class="caption">Management estimates the SCAs at over 35% of revenue through 2030, at expected prices. The firm commitment is smaller. Spread over about 4.5 years, $150bn is roughly $33bn a year, about 14% of the $246bn annual pace in Micron's guidance for next quarter ($61.5bn × 4).</p>
+  </div>
+  <div class="stack">
+    <h3>New supply arrives from 2027</h3>
+    <div class="timeline">
+      <div class="ev"><span class="when">Early 2027</span><span>Singapore HBM packaging plant, first output</span></div>
+      <div class="ev"><span class="when">Mid-2027</span><span>Idaho fab ID1, first wafers; Tongluo, Taiwan, meaningful shipments</span></div>
+      <div class="ev"><span class="when">Late 2028</span><span>Idaho fab ID2 and Japan DRAM expansion, first output; Singapore NAND in the second half</span></div>
+      <div class="ev"><span class="when">2030</span><span>New York fab, first wafers</span></div>
+    </div>
+    <p class="caption">Micron expects the industry to stay short of supply through 2028 and says it has “no line of sight” to when supply and demand return to balance. Its two rivals are adding capacity too, and all of this new supply lands inside the contract term.</p>
+  </div>
+</section>
+
+<section aria-labelledby="val">
+  <h2 id="val">What the price assumes</h2>
+  <p>Memory stocks look cheapest at the top of the cycle, because earnings are at a peak. So the useful question is what the price requires once the boom ends.</p>
+  <ol class="steps">
+    <li>Guidance for next quarter implies EPS of about $153 a year ($38.15 × 4).</li>
+    <li>Assume that pace lasts one to two more years. That adds $153–305 per share.</li>
+    <li>The rest of the price, $792–945, has to be paid for by normal earnings afterwards. At 12–15 times earnings, a typical multiple for a mature chip maker mid-cycle, that means $53–79 per share a year.</li>
+  </ol>
+  <div class="chart">
+    <div class="eps" id="eps"></div>
+  </div>
+  <p class="caption">The price needs post-boom earnings near FY2026's record, 5–7 times the previous cycle's peak. This is simple reverse math, undiscounted, and not a DCF.</p>
+</section>
+
+<section aria-labelledby="ver">
+  <div class="verdict-head"><h2 id="ver">Verdict</h2><span class="rating">HOLD</span></div>
+  <p>The business is excellent and the contracts are a real change. But the price already pays for the shortage lasting, and the contracts cover only a small part of current revenue. The next four quarters will show whether prices hold as new supply arrives.</p>
+  <div class="triggers">
+    <div class="trig up">
+      <h3>Upgrade to Buy if</h3>
+      <ul>
+        <li>The FY2026 10-K confirms the $150bn of obligations and the deposits</li>
+        <li>Contract coverage rises toward half of revenue</li>
+        <li>Prices and gross margin hold as the 2027 fabs ramp</li>
+      </ul>
+    </div>
+    <div class="trig down">
+      <h3>Downgrade to Sell if</h3>
+      <ul>
+        <li>Gross margin falls two quarters in a row. The FQ1-27 guide of 85.95% (GAAP) is already the first guided decline</li>
+        <li>A customer renegotiates a contract or gets a deposit back</li>
+        <li>Capex rises again while price increases slow</li>
+      </ul>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Risk</th><th>Why it matters</th><th>Early warning</th></tr></thead>
+      <tbody>
+        <tr><td>The cycle turns</td><td>Micron's and its rivals' new fabs land in 2027–2028</td><td>Falling memory prices, rising inventory</td></tr>
+        <tr><td>Contracts weaker than they look</td><td>Floor prices are not disclosed and the contracts are untested in a downturn</td><td>Renegotiations, deposit refunds, falling obligations</td></tr>
+        <tr><td>Customer concentration</td><td>One customer was 17% of FY2025 revenue; the top ten were over half</td><td>Order shifts at the largest customers</td></tr>
+        <tr><td>China</td><td>Chinese critical-infrastructure operators have been barred from buying Micron products since 2023</td><td>New Chinese measures</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="stack">
+    <h3>Coming up</h3>
+    <div class="timeline">
+      <div class="ev"><span class="when">Oct 2026</span><span>FY2026 10-K: audited obligations, deposits and customer concentration (expected)</span></div>
+      <div class="ev"><span class="when">Dec 2026</span><span>FQ1 FY2027 results: first full quarter at the new contract mix (expected)</span></div>
+      <div class="ev"><span class="when">2027</span><span>New fabs ramp: does pricing hold?</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="by">
+    <strong>Bar Barzilay</strong>
+    <span>Business Administration, Finance and Capital Markets · The College of Management Academic Studies</span>
+    <div class="links">
+      <a href="https://www.linkedin.com/in/bar-barzilay-ba932235b" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="https://github.com/barbarzilay100-coder" target="_blank" rel="noopener">GitHub</a>
+      <span class="email">barbarzilay100@gmail.com</span>
+    </div>
+  </div>
+  <div class="stack" style="gap:6px">
+    <span class="label">Sources</span>
+    <ol>
+      <li><a href="https://www.sec.gov/Archives/edgar/data/723125/000072312526000018/a2026q4ex991-pressrelease.htm" target="_blank" rel="noopener">Micron FQ4 FY2026 earnings release</a>, Form 8-K Exhibit 99.1, Sep 30, 2026</li>
+      <li><a href="https://investors.micron.com/files/doc_financials/2026/q4/Q4-FY26-Prepared-Remarks.pdf" target="_blank" rel="noopener">Micron FQ4 FY2026 prepared remarks</a>, Sep 30, 2026</li>
+      <li><a href="https://www.sec.gov/Archives/edgar/data/723125/000072312525000028/mu-20250828.htm" target="_blank" rel="noopener">Micron Form 10-K, FY2025</a>, Oct 3, 2025</li>
+      <li><a href="https://data.sec.gov/api/xbrl/companyfacts/CIK0000723125.json" target="_blank" rel="noopener">SEC XBRL financial data</a>, FY2018–FY2025 annual figures</li>
+      <li>Share price: Nasdaq close, Oct 1, 2026</li>
+    </ol>
+  </div>
+  <span>Independent student research. All figures in US dollars.</span>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  var years=['FY18','FY19','FY20','FY21','FY22','FY23','FY24','FY25','FY26'];
+  var rev=[30.39,23.41,21.44,27.71,30.76,15.54,25.11,37.38,133.19];
+  var gm=[58.9,45.7,30.6,37.6,45.2,-9.1,22.4,39.8,80.7];
+  var eps=[11.51,5.51,2.37,5.14,7.75,-5.34,0.70,7.59,74.33];
+  var labelled={0:1,5:1,8:1};
+  var svg=document.getElementById('cycleSvg'), tip=document.getElementById('cycleTip'), box=document.getElementById('cycle');
+  var NS='http://www.w3.org/2000/svg';
+  function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+  function money(v){return '$'+v.toFixed(1)+'bn'}
+  function pct(v){return (v<0?'−':'')+Math.abs(v).toFixed(1)+'%'}
+  function usd(v){return (v<0?'−$':'$')+Math.abs(v).toFixed(2)}
+  // table view
+  var tb=document.getElementById('cycleTable');
+  years.forEach(function(y,i){var tr=document.createElement('tr');tr.innerHTML='<td>FY20'+y.slice(2)+'</td><td class="n">'+money(rev[i])+'</td><td class="n">'+pct(gm[i])+'</td><td class="n">'+usd(eps[i])+'</td>';tb.appendChild(tr)});
+
+  function rBar(x,y0,y1,w,r){ // bar from baseline y0 to value y1, rounded at data end
+    var up=y1<y0, h=Math.abs(y1-y0); r=Math.min(r,h,w/2);
+    if(h<0.5)return '';
+    if(up) return 'M'+x+','+y0+'V'+(y1+r)+'Q'+x+','+y1+' '+(x+r)+','+y1+'H'+(x+w-r)+'Q'+(x+w)+','+y1+' '+(x+w)+','+(y1+r)+'V'+y0+'Z';
+    return 'M'+x+','+y0+'V'+(y1-r)+'Q'+x+','+y1+' '+(x+r)+','+y1+'H'+(x+w-r)+'Q'+(x+w)+','+y1+' '+(x+w)+','+(y1-r)+'V'+y0+'Z';
+  }
+  function draw(){
+    var W=Math.max(300,box.clientWidth-28), H=400, L=46, R=8;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    var band=(W-L-R)/years.length, bw=Math.min(36,band*0.58);
+    var cs=getComputedStyle(document.documentElement);
+    function c(n){return cs.getPropertyValue(n).trim()}
+    var ink=c('--ink'),ink2=c('--ink-2'),muted=c('--muted'),rule=c('--rule'),bar=c('--bar'),acc=c('--accent');
+    var small=W<480;
+    // panel 1: revenue 0..140
+    var p1t=34,p1b=190; function y1(v){return p1b-(v/140)*(p1b-p1t)}
+    // panel 2: gross margin -15..100
+    var p2t=250,p2b=370; function y2(v){return p2b-((v+15)/115)*(p2b-p2t)}
+    var font='font-family:'+c('--font-mono')+';font-size:11px';
+    el('text',{x:0,y:14,fill:ink2,style:font+';letter-spacing:.06em'},svg).textContent='REVENUE, $BN';
+    el('text',{x:0,y:230,fill:ink2,style:font+';letter-spacing:.06em'},svg).textContent='GROSS MARGIN, %';
+    [0,50,100].forEach(function(t){var y=y1(t);el('line',{x1:L,x2:W-R,y1:y,y2:y,stroke:rule,'stroke-width':1},svg);el('text',{x:L-8,y:y+4,'text-anchor':'end',fill:muted,style:font},svg).textContent=t});
+    [0,50,100].forEach(function(t){var y=y2(t);el('line',{x1:L,x2:W-R,y1:y,y2:y,stroke:t===0?muted:rule,'stroke-width':1},svg);el('text',{x:L-8,y:y+4,'text-anchor':'end',fill:muted,style:font},svg).textContent=t+'%'});
+    var cols=[];
+    years.forEach(function(y,i){
+      var cx=L+band*i+band/2, x=cx-bw/2, last=i===years.length-1, fill=last?acc:bar;
+      var g=el('g',{},svg);
+      var hl=el('rect',{x:L+band*i+1,y:p1t-10,width:band-2,height:p2b-p1t+14,fill:rule,opacity:0,rx:3},g);
+      el('path',{d:rBar(x,y1(0),y1(rev[i]),bw,4),fill:fill},g);
+      el('path',{d:rBar(x,y2(0),y2(gm[i]),bw,4),fill:fill},g);
+      el('text',{x:cx,y:p2b+22,'text-anchor':'middle',fill:last?ink:ink2,style:font+(last?';font-weight:500':'')},g).textContent=small?("'"+y.slice(2)):y;
+      if(labelled[i]){
+        el('text',{x:cx,y:y1(rev[i])-6,'text-anchor':'middle',fill:last?ink:ink2,style:font+(last?';font-weight:500':'')},g).textContent=(small&&!last?rev[i].toFixed(0):rev[i].toFixed(1));
+        var gy=gm[i]>=0?y2(gm[i])-6:y2(gm[i])+14;
+        el('text',{x:cx,y:gy,'text-anchor':'middle',fill:last?ink:ink2,style:font+(last?';font-weight:500':'')},g).textContent=(small?gm[i].toFixed(0):gm[i].toFixed(1))+'%';
+      }
+      var hit=el('rect',{x:L+band*i,y:0,width:band,height:H,fill:'transparent',tabindex:0,'aria-label':'FY20'+y.slice(2)+': revenue '+money(rev[i])+', gross margin '+pct(gm[i])+', EPS '+usd(eps[i])},g);
+      hit.style.cursor='default';
+      function show(){
+        cols.forEach(function(o){o.setAttribute('opacity',0)});hl.setAttribute('opacity',0.5);
+        tip.innerHTML='<b>FY20'+y.slice(2)+'</b><br>Revenue '+money(rev[i])+'<br>Gross margin '+pct(gm[i])+'<br>EPS (GAAP) '+usd(eps[i]);
+        tip.hidden=false;
+        var scale=box.clientWidth/W, tx=(cx*scale)+14+14, tw=tip.offsetWidth;
+        if(tx+tw>box.clientWidth-6) tx=(cx*scale)+14-tw-14;
+        tip.style.left=Math.max(6,tx)+'px'; tip.style.top='40px';
+      }
+      function hide(){hl.setAttribute('opacity',0);tip.hidden=true}
+      hit.addEventListener('pointerenter',show);hit.addEventListener('pointerleave',hide);
+      hit.addEventListener('focus',show);hit.addEventListener('blur',hide);
+      cols.push(hl);
+    });
+  }
+  draw();
+  if(window.ResizeObserver){var t;new ResizeObserver(function(){clearTimeout(t);t=setTimeout(draw,60)}).observe(box)}
+  if(window.matchMedia){window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw)}
+  new MutationObserver(draw).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+  // EPS comparison
+  var rows=[
+    {n:'Average EPS, FY2018–FY2025',v:4.40,t:'$4.40'},
+    {n:'Last cycle peak, FY2018',v:11.51,t:'$11.51'},
+    {n:'Price-implied normal EPS',lo:53,hi:79,t:'$53–79',key:1},
+    {n:'Record year, FY2026 (non-GAAP)',v:75.52,t:'$75.52'},
+    {n:'Next-quarter pace, FQ1-27 × 4',v:152.6,t:'$152.60'}
+  ];
+  var max=190, wrap=document.getElementById('eps');
+  rows.forEach(function(r){
+    var row=document.createElement('div');row.className='row'+(r.key?' key':'');
+    var lo=r.key?r.lo:0, hi=r.key?r.hi:r.v;
+    row.innerHTML='<span class="name">'+r.n+'</span><div class="track"><div class="bar'+(r.key?' hl':'')+'" style="left:'+(lo/max*100)+'%;width:'+((hi-lo)/max*100)+'%"></div><span class="val" style="left:'+(hi/max*100)+'%">'+r.t+'</span></div>';
+    wrap.appendChild(row);
+  });
+})();
+</script>
+
+</body>
+</html>
