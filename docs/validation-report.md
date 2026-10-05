@@ -1,20 +1,21 @@
 # Data validation report
 
-Generated 2026-10-02 12:13 UTC · snapshot **Oct 02, 2026** · 126 companies
-Result: **PASS** — 0 hard failure(s), 15 warning(s)
+Generated 2026-10-05 14:06 UTC · snapshot **Oct 05, 2026** · 126 companies
+Result: **PASS** — 0 hard failure(s), 16 warning(s)
 
 ## Warnings (source-data oddities, non-blocking)
 
 - MU: vendor netMargin 63.8% vs 94.1% = vendor netIncome / statement TTM revenue
-- MU: implied upside 315.9% outlier — check source multiples
+- MU: implied upside 337.6% outlier — check source multiples
 - CRWD: implied upside -90.9% outlier — check source multiples
-- DDOG: implied upside -83.0% outlier — check source multiples
-- NET: implied upside -87.8% outlier — check source multiples
-- FIS: implied upside 499.8% outlier — check source multiples
+- DDOG: implied upside -82.9% outlier — check source multiples
+- NET: implied upside -87.7% outlier — check source multiples
+- FIS: implied upside 509.6% outlier — check source multiples
 - GPN: vendor netMargin -9.15% vs 4.8% = vendor netIncome / statement TTM revenue
+- GPN: implied upside 303.3% outlier — check source multiples
 - NU: vendor netMargin 42.73% vs 27.4% = vendor netIncome / statement TTM revenue
 - ICE: vendor netMargin 38.25% vs 30.1% = vendor netIncome / statement TTM revenue
-- TSLA: implied upside -86.7% outlier — check source multiples
+- TSLA: implied upside -87.6% outlier — check source multiples
 - PFE: PEG 12.8897 out of [0, 10]
 - TE: vendor netMargin -38.48% vs -33.1% = vendor netIncome / statement TTM revenue
 - ONDS: vendor netMargin 96.25% vs 49.4% = vendor netIncome / statement TTM revenue
